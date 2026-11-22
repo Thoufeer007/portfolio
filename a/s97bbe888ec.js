@@ -19,7 +19,7 @@
   /* ---------- record + education ---------- */
   $('.tl__list').innerHTML = ROLES.map(([d, t, o, x]) =>
     `<li><p class="tl__d">${d}</p><div><p class="tl__t">${t}</p><p class="tl__o">${o}</p><p class="tl__x">${x}</p></div></li>`).join('');
-  $('.edu').innerHTML = EDU.map(([a, b]) => `<li><b>${esc(a)}</b><span>${esc(b)}</span></li>`).join('');
+  $('.edu').innerHTML = EDU.map(([a, b]) => `<li><b>${esc(a)}</b><span>${esc(b.replace('(IL3) + Zigurat', '(IL3) · Zigurat Institute of Technology'))}</span></li>`).join('');
 
   /* ---------- register: keys + cards ---------- */
   const kindOf = p => p.kind || 'photo';
@@ -453,7 +453,7 @@
         <figure class="ov__cover ${coverPhoto ? 'is-photo' : ''}"><img src="${src(p.cover)}" alt="${esc(p.title + ' ' + p.it)}"></figure>
       </header>
       <aside class="ov__side">
-        <div><p class="k">Project data</p><dl class="facts">${(p.facts || []).map(([a, b]) => `<div><dt>${esc(a)}</dt><dd>${esc(b)}</dd></div>`).join('')}</dl></div>
+        <div><p class="k">Project data</p><dl class="facts">${(p.facts || []).map(([a, b]) => `<div><dt>${esc(a)}</dt><dd>${a === 'Papers' ? '<a href="https://ijcrt.org/papers/IJCRT2007352.pdf" target="_blank" rel="noopener">IJCRT 2020</a> · <a href="https://ijmir.org/2022-v2n3/" target="_blank" rel="noopener">IJMIR 2022</a>' : esc(b)}</dd></div>`).join('')}</dl></div>
         ${(p.nums || []).length ? `<div><p class="k">In numbers</p><dl class="nums">${p.nums.map(([a, b]) => `<div><dt>${esc(a)}</dt><dd>${esc(b)}</dd></div>`).join('')}</dl></div>` : ''}
       </aside>
       <ol class="moves">${(p.moves || []).map((m, j) => `
@@ -577,12 +577,12 @@
         { n: 'Canada', s: 'Canada', lat: 50, lon: -97, p: ['international-models'] },
       ],
       edu: [
-        { n: 'Barcelona', s: 'Spain', lat: 41.39, lon: 2.17, e: ["Master's in Global BIM Management · UB (IL3) + Zigurat · 2025 – 26 · 9.16 / 10", 'AI Applied to Construction Engineering · UPC · 2025 · 9.8 / 10', 'Spanish B1 course, Cervantes-accredited · 2025'] },
+        { n: 'Barcelona', s: 'Spain', lat: 41.39, lon: 2.17, e: ["Master's in Global BIM Management · Universitat de Barcelona (IL3) · Zigurat Institute of Technology · 2025 – 26 · 9.16 / 10", 'AI Applied to Construction Engineering · UPC · 2025 · 9.8 / 10', 'Spanish B1 course, Cervantes-accredited · 2025'] },
         { n: 'Geneva', s: 'Switzerland', lat: 46.2, lon: 6.14, e: ['Postgraduate Diploma (Level 7), Strategic Management and Leadership · SSBM · 2024 – 25'] },
         { n: 'New Delhi', s: 'India', lat: 28.6, lon: 77.2, e: ['Bachelor of Architecture · SPA New Delhi · 2017 · First Class', 'Master of Building Engineering and Management · SPA New Delhi · 2021 · Distinction', 'Project Management: Theory and Practice · IIT Delhi · 2023 – 24'] },
       ],
     };
-    const NOTE = { proj: 'Also in the register, without a pin: Google HQ (India) and the international models, placed by country.', edu: 'Pins show the school or city of each programme.' };
+    const NOTE = { proj: 'Seventh project country: Singapore (not in this register). Google HQ (India) has no pin; the international models are placed by country.', edu: 'Pins show the school or city of each programme.' };
     const P = window.PROJECTS || [];
     const title = slug => { const p = P.find(q => q.slug === slug); return p ? `${p.title} ${p.it}`.trim() : slug; };
     const svgNS = 'http://www.w3.org/2000/svg';
@@ -636,29 +636,63 @@
     } else land();
   }
 
-  /* ---------- download form (backend: Cloudflare worker run by PC-LEGION) ---------- */
-  const form = $('.dl__form');
-  if (form) {
-    const msg = $('.dl__msg', form);
-    let file = 'cv';
-    $$('button[type=submit]', form).forEach(b => b.addEventListener('click', () => { file = b.value; }));
-    form.addEventListener('submit', async e => {
-      e.preventDefault();
-      const f = new FormData(form), v = k => String(f.get(k) || '').trim();
-      const name = v('name'), email = v('email'), company = v('company');
-      if (!name || !company || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.textContent = 'Please fill in your name, a valid email and your company.'; msg.className = 'dl__msg is-err'; return; }
-      if (!form.consent.checked) { msg.textContent = 'Please tick the box to agree, so the request can be stored.'; msg.className = 'dl__msg is-err'; return; }
-      msg.textContent = 'Preparing your download…'; msg.className = 'dl__msg'; form.classList.add('is-busy');
-      try {
-        const r = await fetch('https://portfolio-leads.thoufeer-noushad.workers.dev/lead', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, company, file, consent: true, website: v('website'), source: new URLSearchParams(location.search).get('src') || 'site' })
-        });
-        const d = await r.json().catch(() => ({}));
-        if (d.ok && d.url) { msg.textContent = 'Thank you. Your download is starting.'; msg.className = 'dl__msg is-ok'; window.location.href = d.url; }
-        else { msg.textContent = d.error || 'That did not work. Please try again, or email thoufeer.work@gmail.com.'; msg.className = 'dl__msg is-err'; }
-      } catch (_) { msg.textContent = 'No connection to the download service. Please try again, or email thoufeer.work@gmail.com.'; msg.className = 'dl__msg is-err'; }
-      form.classList.remove('is-busy');
-    });
-  }
+})();
+
+/* ===== 2026-11-22 round 2: View-CV dialog (view only), LinkedIn posts strip, footer project links ===== */
+(() => {
+  const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const lock = on => { if (window.__lenis) on ? window.__lenis.stop() : window.__lenis.start(); document.documentElement.style.overflow = on ? 'hidden' : ''; };
+
+  /* posts: swap a url here when PC-LEGION sends the exact post links */
+  const FEED = 'https://www.linkedin.com/in/thoufeer/recent-activity/all/';
+  const POSTS = [
+    { d: 'Oct 2026', t: "Master's in Global BIM Management: 1,500 hours, 9.16 / 10", url: FEED },
+    { d: 'Nov 2026', t: 'Smart City Expo World Congress 2026: who builds the city AI runs?', url: FEED },
+    { d: 'Oct 2026', t: 'An AI-generated BIM edit can look correct, and still break the model.', url: FEED },
+    { d: 'Oct 2026', t: 'AI says the clash is fixed. Has anyone checked the model?', url: FEED },
+    { d: 'Oct 2026', t: 'One wall. Two asset codes. Which one should you trust?', url: FEED },
+  ];
+  const row = $('.posts__row');
+  if (row) row.innerHTML = POSTS.map(p => `<li><a class="pc" href="${esc(p.url)}" target="_blank" rel="noopener"><span class="pc__d">Post · ${esc(p.d)}</span><span class="pc__t">${esc(p.t)}</span><span class="pc__o">Open on LinkedIn →</span></a></li>`).join('');
+
+  /* footer: project buttons open their sheet */
+  $$('[data-open]').forEach(b => b.addEventListener('click', () => window.__openOv && window.__openOv(b.dataset.open, b)));
+
+  /* View CV: details -> view-only page in a frame (backend: PC-LEGION's worker; no file is ever downloaded) */
+  const dlg = $('.cvd');
+  if (!dlg) return;
+  const form = $('.cvd__form', dlg), msg = $('.cvd__msg', dlg), view = $('.cvd__view', dlg), frame = $('iframe', dlg);
+  let opener = null;
+  const open = el => {
+    opener = el; $('.tb')?.classList.remove('is-open'); lock(true);
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+    (view.hidden ? form.name : $('.cvd__x', dlg)).focus();
+  };
+  const close = () => { if (dlg.close) dlg.close(); else { dlg.removeAttribute('open'); dlg.dispatchEvent(new Event('close')); } };
+  dlg.addEventListener('close', () => { lock(false); if (opener) opener.focus({ preventScroll: true }); });
+  $('.cvd__x', dlg).addEventListener('click', close);
+  dlg.addEventListener('click', e => { if (e.target === dlg) close(); });
+  document.addEventListener('click', e => { const b = e.target.closest('.cv-open'); if (b) { e.preventDefault(); open(b); } });
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = new FormData(form), v = k => String(f.get(k) || '').trim();
+    const name = v('name'), email = v('email'), company = v('company');
+    const err = t => { msg.textContent = t; msg.className = 'cvd__msg is-err'; };
+    if (!name || !company || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return err('Please fill in your name, a valid email and your company.');
+    msg.textContent = 'Opening the CV…'; msg.className = 'cvd__msg'; form.classList.add('is-busy');
+    try {
+      const r = await fetch('https://portfolio-leads.thoufeer-noushad.workers.dev/lead', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, company, file: 'cv', consent: true, website: v('website'), source: new URLSearchParams(location.search).get('src') || 'site' })
+      });
+      const d = await r.json().catch(() => ({}));
+      if (d.ok && d.url) {
+        msg.textContent = '';
+        try { frame.src = d.url; form.hidden = true; view.hidden = false; dlg.classList.add('is-view'); }
+        catch (_) { window.open(d.url, '_blank', 'noopener'); }
+      } else err(d.error || 'That did not work. Please try again, or email thoufeer.work@gmail.com.');
+    } catch (_) { err('No connection right now. Please try again, or email thoufeer.work@gmail.com.'); }
+    form.classList.remove('is-busy');
+  });
 })();
