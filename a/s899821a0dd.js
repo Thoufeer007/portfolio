@@ -461,6 +461,7 @@
         <h3><span>${pad(j + 1)}</span>${esc(m[0])}</h3><p>${esc(m[1])}</p><figcaption><span>Fig. ${pad(p.no)}.${j + 1}</span>${esc(m[4])}</figcaption></li>`).join('')}</ol>`;
     $('.ov__scroll').scrollTop = 0;
   };
+  window.__openOv = (slug, el) => { const i = P.findIndex(p => p.slug === slug); if (i >= 0) openOv(i, el); };
   const openOv = (i, fromEl) => {
     opener = fromEl; fill(i); ov.hidden = false;
     document.documentElement.style.overflow = 'hidden'; if (window.__lenis) window.__lenis.stop();
@@ -519,4 +520,145 @@
 
   /* rebuild construction lines on resize */
   let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { buildLines(); $$('path', heroSvg).forEach(p => p.style.strokeDashoffset = 0); }, 200); });
+})();
+
+/* ===== 2026-11-22 upgrade: footer links, certificate viewer, key plan, download form ===== */
+(() => {
+  const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const stopScroll = on => { if (window.__lenis) on ? window.__lenis.stop() : window.__lenis.start(); document.documentElement.style.overflow = on ? 'hidden' : ''; };
+
+  /* ---------- footer quick links (popover below 1100 px) ---------- */
+  const tb = $('.tb'), more = $('.tb__more');
+  if (more) {
+    more.addEventListener('click', () => { const o = tb.classList.toggle('is-open'); more.setAttribute('aria-expanded', o); });
+    $('#tb-links').addEventListener('click', e => { if (e.target.closest('a')) { tb.classList.remove('is-open'); more.setAttribute('aria-expanded', false); } });
+    document.addEventListener('click', e => { if (!e.target.closest('.tb')) { tb.classList.remove('is-open'); more.setAttribute('aria-expanded', false); } });
+  }
+
+  /* ---------- certificate viewer ---------- */
+  const lb = $('.lb');
+  if (lb) {
+    let opener = null;
+    const open = (img, cap, el) => {
+      opener = el; $('img', lb).src = img.currentSrc || img.src; $('img', lb).alt = img.alt;
+      $('figcaption', lb).innerHTML = cap; stopScroll(true);
+      if (lb.showModal) lb.showModal(); else lb.setAttribute('open', '');
+    };
+    const close = () => { if (lb.close) lb.close(); else lb.removeAttribute('open'); };
+    lb.addEventListener('close', () => { stopScroll(false); if (opener) opener.focus({ preventScroll: true }); });
+    $('.lb__x', lb).addEventListener('click', close);
+    lb.addEventListener('click', e => { if (e.target === lb) close(); });
+    const items = [...$$('.creds__paper').map(p => [p, p.querySelector('img'), p.closest('figure').querySelector('figcaption').innerHTML]),
+                   ...$$('.living img').map(i => [i, i, i.closest('li').querySelector('p').innerHTML])];
+    items.forEach(([el, img, cap]) => {
+      el.setAttribute('role', 'button'); el.tabIndex = 0; el.setAttribute('aria-label', 'Enlarge: ' + img.alt); el.classList.add('zoomable');
+      el.addEventListener('click', () => open(img, cap, el));
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(img, cap, el); } });
+    });
+  }
+
+  /* ---------- key plan: Projects / Education ---------- */
+  const map = $('#map');
+  if (map) {
+    const LON0 = -128, LON1 = 98, LAT1 = 66, LAT0 = 2, W = 1000, H = 283;   // equirectangular crop, viewBox 1000 x 330
+    const X = lon => (lon - LON0) / (LON1 - LON0) * W, Y = lat => (LAT1 - lat) / (LAT1 - LAT0) * H * 1;
+    const PLACES = {
+      proj: [
+        { n: 'Barcelona', s: 'Spain', lat: 41.39, lon: 2.17, p: ['elastic-potential', 'automation-ai', 'wezig', 'strategy-audit'], note: 'Current role: precast, Barcelona' },
+        { n: 'Riyadh and Qiddiya', s: 'Saudi Arabia', lat: 24.7, lon: 46.7, p: ['qiddiya', 'misk-city', 'bim-scoping'] },
+        { n: 'Jubail', s: 'Saudi Arabia', lat: 27.0, lon: 49.66, p: ['jubail-digital-twin'] },
+        { n: 'Abu Dhabi and Hatta', s: 'UAE', lat: 24.6, lon: 55.4, p: ['e12-bridges', 'hatta-water-tank'] },
+        { n: 'Delhi and Gurugram', s: 'India', lat: 28.6, lon: 77.2, p: ['delhi-metro', 'stryker-lab', 'bim-standards', 'bim-scoping', 'international-models'] },
+        { n: 'Vijayawada', s: 'India', lat: 16.51, lon: 80.65, p: ['vijayawada-airport'] },
+        { n: 'Kerala and South India', s: 'India', lat: 9.93, lon: 76.27, p: ['nova-casa', 'kaizen-gym-facade', 'city-centre', 'homes', 'future-group-retail'] },
+        { n: 'Texas', s: 'USA', lat: 32.35, lon: -97.39, p: ['international-models'] },
+        { n: 'Maryland', s: 'USA', lat: 38.98, lon: -76.49, p: ['international-models'] },
+        { n: 'Canada', s: 'Canada', lat: 50, lon: -97, p: ['international-models'] },
+      ],
+      edu: [
+        { n: 'Barcelona', s: 'Spain', lat: 41.39, lon: 2.17, e: ["Master's in Global BIM Management · UB (IL3) + Zigurat · 2025 – 26 · 9.16 / 10", 'AI Applied to Construction Engineering · UPC · 2025 · 9.8 / 10', 'Spanish B1 course, Cervantes-accredited · 2025'] },
+        { n: 'Geneva', s: 'Switzerland', lat: 46.2, lon: 6.14, e: ['Postgraduate Diploma (Level 7), Strategic Management and Leadership · SSBM · 2024 – 25'] },
+        { n: 'New Delhi', s: 'India', lat: 28.6, lon: 77.2, e: ['Bachelor of Architecture · SPA New Delhi · 2017 · First Class', 'Master of Building Engineering and Management · SPA New Delhi · 2021 · Distinction', 'Project Management: Theory and Practice · IIT Delhi · 2023 – 24'] },
+      ],
+    };
+    const NOTE = { proj: 'Also in the register, without a pin: Google HQ (India) and the international models, placed by country.', edu: 'Pins show the school or city of each programme.' };
+    const P = window.PROJECTS || [];
+    const title = slug => { const p = P.find(q => q.slug === slug); return p ? `${p.title} ${p.it}`.trim() : slug; };
+    const svgNS = 'http://www.w3.org/2000/svg';
+    // drawing grid: 15 degree lines
+    let g = '';
+    for (let lon = -120; lon <= 90; lon += 15) g += `<line x1="${X(lon)}" y1="0" x2="${X(lon)}" y2="${H}"/>`;
+    for (let lat = 15; lat <= 60; lat += 15) g += `<line x1="0" y1="${Y(lat)}" x2="${W}" y2="${Y(lat)}"/>`;
+    $('.map__grid', map).innerHTML = g;
+    let layer = 'proj', active = -1;
+    const card = $('.map__card', map), list = $('.map__list', map), pins = $('.map__pins', map);
+    const show = k => {
+      active = k; const pl = PLACES[layer][k];
+      $$('.map__pin', map).forEach((el, i) => el.classList.toggle('on', i === k));
+      $$('.map__list button', map).forEach((el, i) => el.setAttribute('aria-pressed', i === k));
+      if (!pl) { card.innerHTML = '<p class="k">Pick a place</p><p class="map__hint">Tap a pin or a place below.</p>'; return; }
+      card.innerHTML = `<p class="k">${esc(pl.s)}</p><h3>${esc(pl.n)}</h3>` + (layer === 'proj'
+        ? (pl.note ? `<p class="map__hint">${esc(pl.note)}</p>` : '') + `<ul>${pl.p.map(s => `<li><button type="button" data-slug="${s}">${esc(title(s))} <span>→</span></button></li>`).join('')}</ul>`
+        : `<ul class="map__edu">${pl.e.map(t => `<li>${esc(t)}</li>`).join('')}</ul>`);
+    };
+    const draw = () => {
+      const L = PLACES[layer];
+      pins.innerHTML = L.map((pl, i) => `<g class="map__pin" data-k="${i}" transform="translate(${X(pl.lon).toFixed(1)} ${Y(pl.lat).toFixed(1)})" tabindex="0" role="button" aria-label="${esc(pl.n)}"><circle r="15" class="hit"/><circle r="9" class="ring"/><circle r="4" class="dot"/></g>`).join('');
+      list.innerHTML = L.map((pl, i) => `<li><button type="button" data-k="${i}" aria-pressed="false"><b>${esc(pl.n)}</b><span>${esc(pl.s)} · ${layer === 'proj' ? pl.p.length + (pl.p.length > 1 ? ' projects' : ' project') : pl.e.length + (pl.e.length > 1 ? ' programmes' : ' programme')}</span></button></li>`).join('');
+      $('.map__note', map).textContent = NOTE[layer];
+      show(0);
+    };
+    map.addEventListener('click', e => {
+      const t = e.target.closest('[data-layer]');
+      if (t) { layer = t.dataset.layer; $$('[data-layer]', map).forEach(b => b.setAttribute('aria-pressed', b === t)); draw(); return; }
+      const k = e.target.closest('[data-k]'); if (k) { show(+k.dataset.k); return; }
+      const s = e.target.closest('[data-slug]'); if (s && window.__openOv) window.__openOv(s.dataset.slug, s);
+    });
+    pins.addEventListener('keydown', e => { const k = e.target.closest('[data-k]'); if (k && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); show(+k.dataset.k); } });
+    draw();
+    // land outline, loaded only when the map is near the screen (Natural Earth 110 m, public domain)
+    const land = () => fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/land-110m.json').then(r => r.json()).then(t => {
+      const [sx, sy] = t.transform.scale, [tx, ty] = t.transform.translate;
+      const arcs = t.arcs.map(a => { let x = 0, y = 0; return a.map(([dx, dy]) => (x += dx, y += dy, [x * sx + tx, y * sy + ty])); });
+      const ring = ids => { const pts = []; ids.forEach(i => { const a = i < 0 ? arcs[~i].slice().reverse() : arcs[i]; pts.push(...(pts.length ? a.slice(1) : a)); }); return pts; };
+      const o = t.objects.land, geoms = o.type === 'GeometryCollection' ? o.geometries : [o];
+      let d = '';
+      geoms.forEach(gm => (gm.type === 'Polygon' ? [gm.arcs] : gm.type === 'MultiPolygon' ? gm.arcs : []).forEach(poly => poly.forEach(r => {
+        const pts = ring(r); if (!pts.some(([lon, lat]) => lon > LON0 - 30 && lon < LON1 + 30 && lat > LAT0 - 20 && lat < LAT1 + 25)) return;
+        d += 'M' + pts.map(([lon, lat]) => X(lon).toFixed(1) + ' ' + Y(lat).toFixed(1)).join('L') + 'Z';
+      })));
+      const p = document.createElementNS(svgNS, 'path'); p.setAttribute('d', d); $('.map__land', map).appendChild(p); map.classList.add('has-land');
+    }).catch(() => map.classList.add('no-land'));
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); land(); } }, { rootMargin: '600px 0px' });
+      io.observe(map);
+    } else land();
+  }
+
+  /* ---------- download form (backend: Cloudflare worker run by PC-LEGION) ---------- */
+  const form = $('.dl__form');
+  if (form) {
+    const msg = $('.dl__msg', form);
+    let file = 'cv';
+    $$('button[type=submit]', form).forEach(b => b.addEventListener('click', () => { file = b.value; }));
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const f = new FormData(form), v = k => String(f.get(k) || '').trim();
+      const name = v('name'), email = v('email'), company = v('company');
+      if (!name || !company || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.textContent = 'Please fill in your name, a valid email and your company.'; msg.className = 'dl__msg is-err'; return; }
+      if (!form.consent.checked) { msg.textContent = 'Please tick the box to agree, so the request can be stored.'; msg.className = 'dl__msg is-err'; return; }
+      msg.textContent = 'Preparing your download…'; msg.className = 'dl__msg'; form.classList.add('is-busy');
+      try {
+        const r = await fetch('https://portfolio-leads.thoufeer-noushad.workers.dev/lead', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, company, file, consent: true, website: v('website'), source: new URLSearchParams(location.search).get('src') || 'site' })
+        });
+        const d = await r.json().catch(() => ({}));
+        if (d.ok && d.url) { msg.textContent = 'Thank you. Your download is starting.'; msg.className = 'dl__msg is-ok'; window.location.href = d.url; }
+        else { msg.textContent = d.error || 'That did not work. Please try again, or email thoufeer.work@gmail.com.'; msg.className = 'dl__msg is-err'; }
+      } catch (_) { msg.textContent = 'No connection to the download service. Please try again, or email thoufeer.work@gmail.com.'; msg.className = 'dl__msg is-err'; }
+      form.classList.remove('is-busy');
+    });
+  }
 })();
