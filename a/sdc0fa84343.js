@@ -129,9 +129,9 @@
       ['path', { class: 'faint', d: `M0 ${base2} H${W}` }],
       ['path', { class: 'faint', d: `M${l1.x + 4} 0 V${H}` }],
       ['path', { d: `M${l1.x + 4} ${d1} H${l1.x + l1.w} M${l1.x + 4} ${d1 - 6} v12 M${l1.x + l1.w} ${d1 - 6} v12` }],
-      ['text', { x: l1.x + 10, y: d1 - 8 }, 'Architect · SPA New Delhi · 2017'],
+      ['text', { x: l1.x + 10, y: d1 - 8 }, 'Architect · Project Management Specialist · Global BIM Management'],
       ['path', { d: `M${l2.x + l2.w * .08} ${d2} H${l2.x + l2.w} M${l2.x + l2.w * .08} ${d2 - 6} v12 M${l2.x + l2.w} ${d2 - 6} v12` }],
-      ['text', { x: l2.x + l2.w * .08 + 6, y: d2 + 16 }, W < 600 ? 'Delivery lead · Barcelona · 2025 –' : 'Digital delivery lead · Barcelona · 2025 –'],
+      ['text', { x: l2.x + l2.w * .08 + 6, y: d2 + 16 }, W < 600 ? 'SPA New Delhi · UB / Zigurat · Barcelona' : 'SPA New Delhi · Zigurat / Universitat de Barcelona · based in Barcelona'],
     ];
     if (l2.x + l2.w + 200 < W) items.push(
       ['circle', { cx: l2.x + l2.w + 14, cy: base2 - l2.h * .25, r: 6 }],
@@ -143,6 +143,22 @@
       Object.entries(at).forEach(([k, v]) => el.setAttribute(k, v));
       if (txt) el.textContent = txt;
       heroSvg.appendChild(el);
+    });
+    /* fit: each dimension text on one line, its dimension line spanning the whole text */
+    const dims = [...heroSvg.querySelectorAll('path:not(.faint)')].slice(0, 2), texts = [...heroSvg.querySelectorAll('text')].slice(0, 2);
+    [[l1.x + 4, d1, 10], [l2.x + l2.w * .08, d2, 6]].forEach(([x1, y, pad], i) => {
+      const t = texts[i], p = dims[i]; if (!t || !p) return;
+      t.style.fontSize = ''; let tw = t.getComputedTextLength();
+      const room = W - 4 - x1 - pad - 6;
+      if (tw > room && room / tw < .86 && t.textContent.includes(' · ')) {
+        const parts = t.textContent.split(' · '), cut = Math.ceil(parts.length / 2) + (parts.length === 3 ? 0 : 0), x = t.getAttribute('x'), y0 = +t.getAttribute('y');
+        const top = i === 0 ? y0 - 13 : y0, bot = i === 0 ? y0 : y0 + 13;
+        t.textContent = ''; [[parts.slice(0, parts.length - 1).join(' · '), top], [parts[parts.length - 1], bot]].forEach(([txt, yy]) => { const ts = document.createElementNS(NS, 'tspan'); ts.setAttribute('x', x); ts.setAttribute('y', yy); ts.textContent = txt; t.appendChild(ts); });
+        tw = Math.max(...[...t.children].map(c => c.getComputedTextLength()));
+        if (tw > room) { t.style.fontSize = (11 * room / tw).toFixed(2) + 'px'; tw = room; }
+      } else if (tw > room) { t.style.fontSize = (11 * room / tw).toFixed(2) + 'px'; t.style.letterSpacing = '.02em'; tw = t.getComputedTextLength(); }
+      const x2 = Math.min(W - 4, Math.max(+p.getAttribute('d').match(/H([\d.]+)/)[1], x1 + pad + tw + 6));
+      p.setAttribute('d', `M${x1} ${y} H${x2} M${x1} ${y - 6} v12 M${x2} ${y - 6} v12`);
     });
   };
   const drawPaths = (paths, opt = {}) => {
@@ -178,11 +194,11 @@
       gsap.from($$('.w > span', el), { yPercent: 110, duration: 1.1, stagger: .05, ease: 'expo.out', scrollTrigger: { trigger: el, start: 'top 85%' } }));
     /* picture reveal: laptops only. Phones and in-app viewers show every picture at once (never an empty box). */
     const SMALL = matchMedia('(max-width: 820px)').matches;
-    if (!SMALL) $$('.sheet .mask').forEach(m => {
+    if (!SMALL) $$('.sheet .mask').filter(m => !m.closest('.profile__photo')).forEach(m => {
       gsap.fromTo(m, { clipPath: 'inset(100% 0 0 0)' }, { clipPath: 'inset(0% 0 0 0)', duration: 1.3, ease: 'expo.inOut', scrollTrigger: { trigger: m, start: 'top 85%', once: true } });
       gsap.fromTo($('img', m), { scale: 1.3 }, { scale: 1, duration: 1.8, ease: 'expo.out', scrollTrigger: { trigger: m, start: 'top 85%', once: true } });
     });
-    if (SMALL) $$('.sheet .mask img').forEach(img => gsap.fromTo(img, { scale: 1.14 }, { scale: 1, ease: 'none', scrollTrigger: { trigger: img.closest('.mask'), start: 'top bottom', end: 'bottom 35%', scrub: .4 } }));
+    if (SMALL) $$('.sheet .mask img').filter(m => !m.closest('.profile__photo')).forEach(img => gsap.fromTo(img, { scale: 1.14 }, { scale: 1, ease: 'none', scrollTrigger: { trigger: img.closest('.mask'), start: 'top bottom', end: 'bottom 35%', scrub: .4 } }));
     /* safety net: any picture on screen that is still clipped after 1.2 s is shown */
     if ('IntersectionObserver' in window) {
       const io = new IntersectionObserver(es => es.forEach(en => {
@@ -227,14 +243,14 @@
     /* desktop: sheets stack + horizontal register */
     const mm = gsap.matchMedia();
     mm.add('(min-width: 821px)', () => {
-      const order = $$('#hero, #model, #profile, #record, #credentials, #models, #featured, #work, #community, #contact');
+      const order = $$('main > section');
       order.forEach((s, i) => s.style.zIndex = i + 1);
       const dist = () => Math.max(0, track.scrollWidth - innerWidth);
       const bar = $('.reel__bar i'), cnt = $('.reel__count');
       let st;
-      const pinned = ['hero', 'profile', 'record'];   // community scrolls: five photos are taller than a screen
+      const pinned = ['hero', 'profile'];   // community scrolls: five photos are taller than a screen
       order.forEach(s => {
-        if (s.id === 'work') {
+        if (s.id === 'work-off') {
           const tw = gsap.to(track, { x: () => -dist(), ease: 'none' });
           st = ScrollTrigger.create({
             trigger: '#work', start: 'top top', end: () => '+=' + dist() * .6, pin: true, scrub: .8, animation: tw, invalidateOnRefresh: true,
@@ -262,10 +278,10 @@
         ScrollTrigger.create({ trigger: s, start: () => s.offsetHeight > innerHeight ? 'bottom bottom' : 'top top', endTrigger: next, end: 'top top', pin: true, pinSpacing: false });
         gsap.to(shade, { opacity: .38, ease: 'none', scrollTrigger: { trigger: next, start: 'top bottom', end: 'top top', scrub: true } });
       });
-      window.__reelStart = () => st.start;
+      window.__reelStart = null;
       return () => { order.forEach(s => s.style.zIndex = ''); $$('.shade').forEach(x => x.remove()); };
     });
-    mm.add('(max-width: 820px)', () => {
+    mm.add('(min-width: 0px)', () => {
       const reel = $('.reel'), bar = $('.reel__bar i'), cnt = $('.reel__count');
       const on = () => {
         const max = reel.scrollWidth - reel.clientWidth, p = max > 0 ? reel.scrollLeft / max : 0;
@@ -459,7 +475,8 @@
       </aside>
       <ol class="moves">${(p.moves || []).map((m, j) => `
         <li class="mv"><div class="mv__img ${m[3] === 'photo' ? 'is-photo' : ''}"><img src="${src(m[2])}" alt="${esc(m[4])}" loading="lazy"></div>
-        <h3><span>${pad(j + 1)}</span>${esc(m[0])}</h3><p>${esc(m[1])}</p><figcaption><span>Fig. ${pad(p.no)}.${j + 1}</span>${esc(m[4])}</figcaption></li>`).join('')}</ol>`;
+        <h3><span>${pad(j + 1)}</span>${esc(m[0])}</h3><p>${esc(m[1])}</p><figcaption><span>Fig. ${pad(p.no)}.${j + 1}</span>${esc(m[4])}</figcaption></li>`).join('')}</ol>` +
+      ((window.__views ? window.__views(p.slug) : []).length ? `<section class="ov__views"><p class="k">Model views · tap to enlarge</p><ul>${window.__views(p.slug).map(v => `<li><button type="button" class="ov__v" data-cap="${esc(v.cap)}"><img src="${v.src}" alt="${esc(v.cap)}" loading="lazy"><span>${esc(v.cap)}</span></button></li>`).join('')}</ul></section>` : '');
     $('.ov__scroll').scrollTop = 0;
   };
   window.__openOv = (slug, el) => { const i = P.findIndex(p => p.slug === slug); if (i >= 0) openOv(i, el); };
@@ -567,22 +584,19 @@
     const title = slug => { const p = P.find(q => q.slug === slug); return p ? `${p.title} ${p.it}`.trim() : slug; };
     const LAYERS = {
       journey: [
-        { n: 'Kerala', s: 'India · where it starts', lat: 9.93, lon: 76.27, e: ['Home, and the family design-and-build practice (Novacasa)', 'Site project manager, Built Well: eight retail fit-outs · 2017 – 19'], p: ['nova-casa', 'future-group-retail'] },
-        { n: 'New Delhi', s: 'India · 2012 – 2024', lat: 28.6, lon: 77.2, e: ['SPA New Delhi: B.Arch 2017, M.BEM 2021', 'Techture: BIM Coordinator · 2021 – 24', 'CBRE: Project Manager · 2024'], p: ['delhi-metro', 'jubail-digital-twin', 'misk-city', 'stryker-lab'] },
-        { n: 'Barcelona', s: 'Spain · now', lat: 41.39, lon: 2.17, e: ["Master's in Global BIM Management · 9.16 / 10", 'Scruffy Dog: Qiddiya · 2025', 'Current role: precast, BIM automation and AI'], p: ['elastic-potential', 'qiddiya', 'wezig'] },
+        { n: 'Kerala', s: 'India · where it starts', lat: 9.93, lon: 76.27, e: ['Home, and the family design-and-build practice (Novacasa)', 'In practice since 2013: freelance design and 3D visualisation', 'Site project manager, Built Well: eight retail fit-outs · 2017 – 19'] },
+        { n: 'New Delhi', s: 'India · 2012 – 2024', lat: 28.6, lon: 77.2, e: ['SPA New Delhi: B.Arch 2017, M.BEM 2021', 'Techture: BIM Coordinator · 2021 – 24', 'CBRE: Project Manager · 2024'] },
+        { n: 'Barcelona', s: 'Spain · now', lat: 41.39, lon: 2.17, e: ["Master's in Global BIM Management · 9.16 / 10", 'Scruffy Dog: Qiddiya · 2025', 'Current role: precast, BIM automation and AI'] },
       ],
       proj: [
         { n: 'Barcelona', s: 'Spain', lat: 41.39, lon: 2.17, p: ['elastic-potential', 'automation-ai', 'wezig', 'strategy-audit'], note: 'Current role: precast, Barcelona' },
         { n: 'Riyadh and Qiddiya', s: 'Saudi Arabia', lat: 24.7, lon: 46.7, p: ['qiddiya', 'misk-city', 'bim-scoping'] },
         { n: 'Jubail', s: 'Saudi Arabia', lat: 27.0, lon: 49.66, p: ['jubail-digital-twin'] },
         { n: 'Abu Dhabi and Hatta', s: 'UAE', lat: 24.6, lon: 55.4, p: ['e12-bridges', 'hatta-water-tank'] },
-        { n: 'Delhi and Gurugram', s: 'India', lat: 28.6, lon: 77.2, p: ['delhi-metro', 'stryker-lab', 'bim-standards', 'google-hq', 'international-models'] },
+        { n: 'Delhi and Gurugram', s: 'India', lat: 28.6, lon: 77.2, p: ['delhi-metro', 'stryker-lab', 'bim-standards', 'google-hq'] },
         { n: 'Vijayawada', s: 'India', lat: 16.51, lon: 80.65, p: ['vijayawada-airport'] },
         { n: 'Kerala and South India', s: 'India', lat: 9.93, lon: 76.27, p: ['nova-casa', 'kaizen-gym-facade', 'city-centre', 'homes', 'future-group-retail'] },
-        { n: 'Singapore', s: 'Singapore', lat: 1.35, lon: 103.82, p: [], note: 'Earlier project work, not in this register.' },
-        { n: 'Texas', s: 'USA', lat: 32.35, lon: -97.39, p: ['international-models'] },
-        { n: 'Maryland', s: 'USA', lat: 38.98, lon: -76.49, p: ['international-models'] },
-        { n: 'Canada', s: 'Canada', lat: 50, lon: -97, p: ['international-models'] },
+        { n: 'North America', s: 'USA · Canada · international models', lat: 42, lon: -88, p: ['international-models'], note: 'One package of models for clients in the USA and Canada, coordinated from New Delhi.' },
       ],
       edu: [
         { n: 'Barcelona', s: 'Spain', lat: 41.39, lon: 2.17, e: ["Master's in Global BIM Management · Universitat de Barcelona (IL3) · Zigurat Institute of Technology · 2025 – 26 · 9.16 / 10", 'AI Applied to Construction Engineering · UPC · 2025 · 9.8 / 10', 'Spanish B1 course, Cervantes-accredited · 2025'] },
@@ -591,9 +605,10 @@
       ],
     };
     const ROUTES = { journey: [[0, 1, '2012'], [1, 2, '2024 – 25']], proj: [], edu: [] };
-    const SPOKES = { journey: [[1, 24.7, 46.7], [1, 27.0, 49.66], [1, 24.6, 55.4], [1, 32.35, -97.39], [1, 38.98, -76.49], [1, 50, -97], [1, 16.51, 80.65], [2, 24.7, 46.7]] };
+    const SPOKES = { journey: [[1, 24.7, 46.7], [1, 27.0, 49.66], [1, 24.6, 55.4], [1, 42, -88], [1, 16.51, 80.65], [2, 24.7, 46.7]] };
+    const NET = [[4, 1], [4, 2], [4, 3], [4, 5], [4, 7], [4, 6], [0, 1]];   // project network: bases (Delhi 4, Barcelona 0) to the places they served
     const stage = $('.map__stage', map), card = $('.map__card', map);
-    let layer = 'journey', active = -1, focusTo = null;
+    let layer = 'journey', active = -1, focusTo = null, userPicked = false;
     const show = k => {
       active = k; const pl = LAYERS[layer][k];
       $$('.map__pinb', map).forEach((el, i) => el.classList.toggle('on', i === k));
@@ -602,18 +617,23 @@
       card.hidden = false;
       const links = (pl.p || []).length ? `<ul>${pl.p.map(s => `<li><button type="button" data-slug="${s}">${esc(title(s))} <span>→</span></button></li>`).join('')}</ul>` : '';
       card.innerHTML = `<button type="button" class="map__x" aria-label="Close">✕</button><p class="k">${esc(pl.s)}</p><h3>${esc(pl.n)}</h3>` +
-        (pl.note ? `<p class="map__hint">${esc(pl.note)}</p>` : '') + (pl.e ? `<ul class="map__edu">${pl.e.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : '') + (layer !== 'edu' ? links : '');
+        (pl.note ? `<p class="map__hint">${esc(pl.note)}</p>` : '') + (pl.e ? `<ul class="map__edu">${pl.e.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : '') + (layer === 'proj' ? links : '');
       if (focusTo) focusTo(pl);
     };
     map.addEventListener('click', e => {
       const t = e.target.closest('[data-layer]');
-      if (t) { layer = t.dataset.layer; $$('[data-layer]', map).forEach(b => b.setAttribute('aria-pressed', b === t)); draw(); return; }
+      if (t) { userPicked = true; setLayer(t.dataset.layer); return; }
+      if (e.target.closest('.map__pinb, .map__pin, .map__card')) userPicked = true;
       if (e.target.closest('.map__x')) { show(-1); return; }
       const k = e.target.closest('[data-k]'); if (k) { show(+k.dataset.k); return; }
       const s = e.target.closest('[data-slug]'); if (s && window.__openOv) window.__openOv(s.dataset.slug, s);
     });
     const label = (pl) => `${pl.n}, ${pl.s}` + (pl.p && pl.p.length ? `, ${pl.p.length} project${pl.p.length > 1 ? 's' : ''}` : '');
     let draw = () => {};
+    const setLayer = l => { layer = l; $$('[data-layer]', map).forEach(b => b.setAttribute('aria-pressed', b.dataset.layer === l)); draw(); };
+    /* auto-cycle Journey > Education > Projects (6.5 s each) until the visitor picks; only while the globe is on screen */
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) { let onScreen = false; new IntersectionObserver(es => { onScreen = es.some(e => e.isIntersecting && e.intersectionRatio > .35); }, { threshold: [0, .35, .7] }).observe(map);
+      setInterval(() => { if (userPicked || !onScreen || document.visibilityState !== 'visible') return; const ord = ['journey', 'edu', 'proj']; setLayer(ord[(ord.indexOf(layer) + 1) % 3]); }, 6500); }
     const gl = (() => { try { const c = document.createElement('canvas'); return !!(window.THREE && (c.getContext('webgl') || c.getContext('experimental-webgl'))); } catch (_) { return false; } })();
 
     if (gl) {
@@ -625,7 +645,7 @@
       const cv = document.createElement('canvas'); cv.setAttribute('aria-label', 'Globe: where he studied, worked and moved. Drag to turn it.'); cv.setAttribute('role', 'img');
       const pinLayer = document.createElement('div'); pinLayer.className = 'globe__pins';
       const legend = document.createElement('p'); legend.className = 'globe__leg';
-      const LEGEND = { journey: 'Kerala → New Delhi, 2012 → Barcelona, 2024 – 25 · thin lines: project work from each base', proj: 'Twenty projects, seven countries · tap a pin to open its sheets', edu: 'Where each degree and course was taken' };
+      const LEGEND = { journey: 'Kerala → New Delhi, 2012 → Barcelona, 2024 – 25 · thin lines: project work from each base', proj: 'Twenty projects, six countries · lines run from each base · tap a pin to open its sheets', edu: 'Where each degree and course was taken' };
       wrap.append(cv, pinLayer, legend); stage.prepend(wrap);
       const R = new T.WebGLRenderer({ canvas: cv, antialias: true, alpha: true });
       R.setPixelRatio(Math.min(2, devicePixelRatio || 1));
@@ -665,10 +685,10 @@
         });
         (ROUTES[layer] || []).forEach(([a, b, yr], j) => arc(v3(L[a].lat, L[a].lon, 1.003), v3(L[b].lat, L[b].lon, 1.003), .45, { tube: true, delay: .3 + j * 1.3, dur: 1.2, text: yr }));
         (SPOKES[layer] || []).forEach(([a, lat, lon], j) => arc(v3(L[a].lat, L[a].lon, 1.003), v3(lat, lon, 1.003), .25, { delay: 2.8 + j * .12, dur: .9 }));
-        if (layer === 'proj') L.forEach((pl, i) => { if (i && pl.p.length) arc(v3(41.39, 2.17, 1.003), v3(pl.lat, pl.lon, 1.003), .2, { delay: .2 + i * .1, dur: .8 }); });
+        if (layer === 'proj') NET.forEach(([a0, b0], j) => arc(v3(L[a0].lat, L[a0].lon, 1.003), v3(L[b0].lat, L[b0].lon, 1.003), .22, { delay: .2 + j * .12, dur: .8 }));
         legend.textContent = LEGEND[layer];
         start = performance.now(); show(-1);
-        if (layer === 'journey') { rotY = targetY = Math.atan2(-v3(28.6, 50).x, v3(28.6, 50).z); }
+        { const c = layer === 'proj' ? v3(30, 20) : v3(28.6, 50); let ty = Math.atan2(-c.x, c.z); while (ty - rotY > Math.PI) ty -= 2 * Math.PI; while (rotY - ty > Math.PI) ty += 2 * Math.PI; targetY = ty; idle = -2; }
       };
       // land outline (Natural Earth 110 m, public domain), loaded with the globe
       fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/land-110m.json').then(r => r.json()).then(t => {
@@ -684,9 +704,9 @@
         globe.add(new T.LineSegments(g, lineMat(0x16181D, .7)));
       }).catch(() => {});
       // turning: drag (horizontal on touch, so the page still scrolls), slow idle spin, glide to a picked place
-      let rotY = 0, rotX = .32, targetY = 0, targetX = .32, drag = false, lx = 0, ly = 0, idle = 0;
+      var rotY = 0, rotX = .32, targetY = 0, targetX = .32, drag = false, lx = 0, ly = 0, idle = 0;
       focusTo = pl => { const p = v3(pl.lat, pl.lon); let ty = Math.atan2(-p.x, p.z); while (ty - rotY > Math.PI) ty -= 2 * Math.PI; while (rotY - ty > Math.PI) ty += 2 * Math.PI; targetY = ty; targetX = Math.max(-.6, Math.min(.6, Math.atan2(p.y, Math.hypot(p.x, p.z)))); idle = -6; };
-      cv.addEventListener('pointerdown', e => { drag = true; lx = e.clientX; ly = e.clientY; idle = -4; cv.setPointerCapture(e.pointerId); });
+      cv.addEventListener('pointerdown', e => { drag = true; userPicked = true; lx = e.clientX; ly = e.clientY; idle = -4; cv.setPointerCapture(e.pointerId); });
       cv.addEventListener('pointermove', e => { if (!drag) return; targetY += (e.clientX - lx) * .008; if (e.pointerType === 'mouse') targetX = Math.max(-.6, Math.min(.6, targetX + (e.clientY - ly) * .005)); lx = e.clientX; ly = e.clientY; });
       cv.addEventListener('pointerup', () => { drag = false; }); cv.addEventListener('pointercancel', () => { drag = false; });
       const size = () => { const w = wrap.clientWidth, h = wrap.clientHeight; R.setSize(w, h, false); cam.aspect = w / h; cam.position.z = w / h < 1 ? 4.6 / Math.max(.62, w / h) * .8 : 4.9; cam.updateProjectionMatrix(); };
@@ -801,7 +821,7 @@
     form.classList.remove('is-busy');
   });
 })();
-/* ===== 2026-11-23 round 5 hero: a building that assembles like a digital twin =====
+/* ===== 2026-11-23 round 5 hero: a building that assembles like a digital twin (round 6: clear architecture layer + rebuild loop; round 7: louvres) =====
    site and infrastructure > structure > interior > MEP > facade > twin layer, with a section cut sweeping through once.
    Starts only after the name has appeared ('hero:intro'). Reduced motion / no WebGL: the poster stays. */
 (() => {
@@ -813,9 +833,9 @@
   if (reduce) return;
   try { const c = document.createElement('canvas'); if (!(c.getContext('webgl') || c.getContext('experimental-webgl'))) return; } catch (_) { return; }
   const T = THREE, phone = innerWidth <= 820 && !POSTER;
-  const LAYERS = [['g', 'Site'], ['s', 'Structure'], ['i', 'Interior'], ['m', 'MEP'], ['a', 'Facade'], ['t', 'Twin']];
+  const LAYERS = [['g', 'Site'], ['s', 'Structure'], ['a', 'Architecture'], ['i', 'Interior'], ['m', 'MEP'], ['t', 'Twin']];
   const cv = document.createElement('canvas'); cv.className = 'h3d__cv';
-  cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', 'Animated model of a building assembling: site and utilities, structure, interior, MEP, facade and a digital-twin layer');
+  cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', 'Animated model of a building assembling: site and utilities, structure, architecture, interior, MEP and a digital-twin layer');
   box.append(cv);
   box.insertAdjacentHTML('beforeend', '<p class="h3d__chip"><span>ISO 19650</span><b>WIP</b></p><div class="h3d__tags" aria-hidden="true"></div>');
   const cap = $('figcaption', fig);
@@ -838,7 +858,7 @@
   const lineM = (o, clip = true, c = INK) => lineCache[o + '|' + clip + '|' + c] || (lineCache[o + '|' + clip + '|' + c] = new T.LineBasicMaterial({ color: c, transparent: true, opacity: o, clippingPlanes: clip ? CL : null }));
   const M = {
     pad: mat(0xA59E92), roofS: mat(0xD8D2C6, .5), conc: mat(0xB9B2A6, .97), slab: mat(0xD3CCC0, .95), core: mat(0xC4BDB1, .42),
-    glass: mat(0xDDE3EE, .26), glassD: mat(0xB8C2D6, .4), fin: mat(0xABA599), canopy: mat(0x6F6B64), parapet: mat(0xE4DFD3),
+    wall: mat(0xF5F0E6), deck: mat(0xC9B497), glass: mat(0xDDE3EE, .26), glassD: mat(0xB8C2D6, .4), fin: mat(0xABA599), canopy: mat(0x6F6B64), parapet: mat(0xE4DFD3),
     part: mat(0xF1EDE4, .9), furn: mat(0xC9C0B0), table: mat(0xA8977E), lift: mat(0x6F6B64),
     pipe: basic(COB), duct: mat(0xA5533A, .92), tray: mat(0x8A8D94), plant: mat(0xDAD4C8),
     ground: mat(0xF3EFE6, 1, false), road: mat(0xBDB9B0, 1, false), kerb: mat(0xB7B1A5, 1, false), pit: mat(0xD8C9AC, .22, false),
@@ -851,17 +871,17 @@
   const add = (geo, m, x, y, z, layer, t, kind, eo = .7) => {
     const mesh = new T.Mesh(geo, m); mesh.position.set(x, y, z);
     if (eo) mesh.add(new T.LineSegments(new T.EdgesGeometry(geo), lineM(eo, !!m.clippingPlanes)));
-    L[layer].add(mesh); items.push({ mesh, t, kind, x, y, z }); return mesh;
+    L[layer].add(mesh); items.push({ mesh, t, kind, x, y, z, layer }); return mesh;
   };
   const lines = (pts, m, layer, t, dur = 1) => {      // pts: flat list of segment pairs; drawn in over dur
     const g = new T.BufferGeometry().setAttribute('position', new T.Float32BufferAttribute(pts, 3));
     const ln = new T.LineSegments(g, m); if (m.isLineDashedMaterial) ln.computeLineDistances();
-    L[layer].add(ln); g.setDrawRange(0, 0); items.push({ mesh: ln, t, kind: 'drawL', total: pts.length / 3, dur }); return ln;
+    L[layer].add(ln); g.setDrawRange(0, 0); items.push({ mesh: ln, t, kind: 'drawL', total: pts.length / 3, dur, layer }); return ln;
   };
   const tube = (pts, r, m, layer, t, dur = 1.1) => {
     const curve = new T.CatmullRomCurve3(pts.map(p => new T.Vector3(...p)), false, 'catmullrom', .02);
     const g = new T.TubeGeometry(curve, 90, r, 8, false), mesh = new T.Mesh(g, m); L[layer].add(mesh);
-    g.setDrawRange(0, 0); items.push({ mesh, t, kind: 'draw', total: g.index.count, dur }); return mesh;
+    g.setDrawRange(0, 0); items.push({ mesh, t, kind: 'draw', total: g.index.count, dur, layer }); return mesh;
   };
 
   /* ---- dimensions ---- */
@@ -912,13 +932,13 @@
   const parts = [], perFloorDesks = phone ? 3 : 6;
   for (let s = 0; s < ST; s++) {
     const y = ft(s), ti = 2.1 + s * .16, ph = .8;
-    add(boxL(W - 1.25, ph, .035), M.part, 1.1, y + ph / 2, 1.45, 'i', ti, 'growX', .4);
-    add(boxB(.035, ph, D - 1.6), M.part, W - 1.7, y, 1.45 + (D - 1.6) / 2, 'i', ti + .05, 'rise', .4);
-    add(boxB(.035, ph, 1.35), M.part, 2.65, y, .1 + 1.35 / 2, 'i', ti + .08, 'rise', .4);
+    add(boxL(W - 1.25, ph, .035), M.part, 1.1, y + ph / 2, 1.45, 'a', ti, 'growX', .45);
+    add(boxB(.035, ph, D - 1.6), M.part, W - 1.7, y, 1.45 + (D - 1.6) / 2, 'a', ti + .05, 'rise', .45);
+    add(boxB(.035, ph, 1.35), M.part, 2.65, y, .1 + 1.35 / 2, 'a', ti + .08, 'rise', .45);
     add(boxB(.9, .27, .42), M.table, W - .85, y, D - .78, 'i', ti + .25, 'pop', .5);
     const desks = new T.InstancedMesh(boxB(.48, .3, .27), M.furn, perFloorDesks), m4 = new T.Matrix4();
     for (let k = 0; k < perFloorDesks; k++) { m4.makeTranslation(1.45 + (k % 3) * .68, 0, 1.85 + Math.floor(k / 3) * .62); desks.setMatrixAt(k, m4); }
-    desks.position.set(0, y, 0); L.i.add(desks); items.push({ mesh: desks, t: ti + .3, kind: 'pop' });
+    desks.position.set(0, y, 0); L.i.add(desks); items.push({ mesh: desks, t: ti + .3, kind: 'pop', layer: 'i' });
     add(boxB(.28, .42, .28), M.lift, .33, y, D - .33, 'i', ti + .1, 'pop', .5);
     // stair flight inside the core, light ink
     const st = []; const n = 7, x0 = .72, z0 = D - .98, dz = .84 / n, dy = H / n;
@@ -938,22 +958,39 @@
   [-.26, .26].forEach((dx, k) => add(new T.CylinderGeometry(.16, .16, .05, 20), M.canopy, W - 1.35 + dx, roof + .49, .95, 'm', 4.05 + k * .08, 'pop', .6));
   add(boxB(.24, .5, .24), M.duct, W - 1.35, roof - .02, 1.5, 'm', 4.0, 'rise', .5);
 
-  /* ---- facade: curtain wall (front), fins (side), entrance canopy, parapet ---- */
+  /* ---- architecture: curtain wall + fins (front), punched wall with framed windows (side), entrance canopy, roof terrace ---- */
   t = 3.25;
-  for (let s = 0; s < ST; s++) {
-    for (let i = 0; i < BX; i++) add(new T.BoxGeometry(bay - .04, H - .06, .03), s === 0 && i === 1 ? M.glassD : M.glass, i * bay + bay / 2, fl(s) + H / 2 + .02, D + .13, 'a', t + (s * BX + i) * .04, 'slideZ', 0);
-    for (let j = 0; j < BZ; j++) add(new T.BoxGeometry(.03, H - .06, bay - .04), M.glass, W + .13, fl(s) + H / 2 + .02, j * bay + bay / 2, 'a', t + .1 + (s * BZ + j) * .04, 'slideX', 0);
-  }
+  for (let s = 0; s < ST; s++) for (let i = 0; i < BX; i++) add(new T.BoxGeometry(bay - .04, H - .06, .03), s === 0 && i === 1 ? M.glassD : M.glass, i * bay + bay / 2, fl(s) + H / 2 + .02, D + .13, 'a', t + (s * BX + i) * .04, 'slideZ', 0);
   const mul = [], zf = D + .15;
   for (let k = 0; k <= BX * 3; k++) { const x = k * bay / 3; mul.push(x, fl(0), zf, x, fl(ST) + .05, zf); }
   for (let s = 0; s <= ST; s++) { mul.push(0, fl(s) + .02, zf, W, fl(s) + .02, zf); if (s < ST) mul.push(0, fl(s) + .3, zf, W, fl(s) + .3, zf); }
   lines(mul, lineM(.6), 'a', t + .2, 1.1);
-  const nf = phone ? 7 : 11, fins = new T.InstancedMesh(boxB(.24, ST * H, .03), M.fin, nf), m4 = new T.Matrix4();
-  for (let k = 0; k < nf; k++) { m4.makeTranslation(W + .27, 0, .12 + k * (D - .24) / (nf - 1)); fins.setMatrixAt(k, m4); }
-  fins.position.y = fl(0); L.a.add(fins); items.push({ mesh: fins, t: t + .5, kind: 'rise' });
+  const nf = phone ? 4 : 7, fins = new T.InstancedMesh(boxB(.05, ST * H + .05, .24), M.fin, nf), m4 = new T.Matrix4();
+  for (let k = 0; k < nf; k++) { m4.makeTranslation(k * W / (nf - 1), 0, D + .27); fins.setMatrixAt(k, m4); }
+  fins.position.y = fl(0); L.a.add(fins); items.push({ mesh: fins, t: t + .55, kind: 'rise', layer: 'a' });
+  const xw = W + .13, wt = .1, sill = .3, wh = .55;
+  for (let s = 0; s < ST; s++) {
+    const y0 = fl(s) + .02, ts = t + .15 + s * .12;
+    add(boxB(wt, sill, D + .3), M.wall, xw, y0, D / 2, 'a', ts, 'slideX', .7);
+    add(boxB(wt, H - .04 - sill - wh, D + .3), M.wall, xw, y0 + sill + wh, D / 2, 'a', ts + .04, 'slideX', .7);
+    [[-.15, .3], [1.3, 1.9], [2.9, D + .15]].forEach(([z0, z1], k) => add(boxB(wt, wh, z1 - z0), M.wall, xw, y0 + sill, (z0 + z1) / 2, 'a', ts + .06 + k * .02, 'slideX', .7));
+    for (let j = 0; j < BZ; j++) {
+      add(boxB(.02, wh - .04, .96), M.glass, xw + .02, y0 + sill + .02, j * bay + .8, 'a', ts + .2 + j * .05, 'slideX', .95);
+      lines([xw + .06, y0 + sill, j * bay + .8, xw + .06, y0 + sill + wh, j * bay + .8], lineM(.7), 'a', ts + .3, .4);
+    }
+  }
   add(new T.BoxGeometry(bay + .5, .07, .62), M.canopy, bay * 1.5, fl(1) - .1, D + .46, 'a', t + .7, 'drop', .7);
-  [[W / 2, D + .15, W + .3, .05], [W / 2, -.15, W + .3, .05]].forEach(([x, z, w, d]) => add(boxB(w, .22, d), M.parapet, x, roof, z, 'a', t + .9, 'drop', .6));
-  [[W + .15, D / 2], [-.15, D / 2]].forEach(([x, z]) => add(boxB(.05, .22, D + .3), M.parapet, x, roof, z, 'a', t + .95, 'drop', .6));
+  // round 7: a sun-shading screen on the top floor (horizontal louvres in front of the glass)
+  const nl = phone ? 4 : 6, lv = new T.InstancedMesh(new T.BoxGeometry(W + .2, .035, .16).translate(W / 2, 0, 0), M.fin, nl), m5 = new T.Matrix4();
+  for (let k = 0; k < nl; k++) { m5.makeTranslation(-.1, fl(ST - 1) + .22 + k * (H - .35) / (nl - 1), D + .36); lv.setMatrixAt(k, m5); }
+  L.a.add(lv); items.push({ mesh: lv, t: t + .8, kind: 'growX', layer: 'a' });
+  // roof terrace: timber deck, low upstand, glass balustrade with a top rail
+  add(new T.BoxGeometry(W * .55, .04, D * .58), M.deck, W * .3, roof + .02, D * .68, 'a', t + .85, 'drop', .5);
+  [[W / 2, D + .15, W + .3, .05], [W / 2, -.15, W + .3, .05]].forEach(([x, z, w, d]) => add(boxB(w, .08, d), M.parapet, x, roof, z, 'a', t + .9, 'drop', .6));
+  [[W + .15, D / 2], [-.15, D / 2]].forEach(([x, z]) => add(boxB(.05, .08, D + .3), M.parapet, x, roof, z, 'a', t + .95, 'drop', .6));
+  add(boxB(W + .3, .3, .02), M.glass, W / 2, roof + .08, D + .15, 'a', t + 1.0, 'rise', .8);
+  add(boxB(.02, .3, D + .3), M.glass, W + .15, roof + .08, D / 2, 'a', t + 1.05, 'rise', .8);
+  lines([-.15, roof + .4, D + .15, W + .15, roof + .4, D + .15, W + .15, roof + .4, D + .15, W + .15, roof + .4, -.15], lineM(.85), 'a', t + 1.1, .6);
 
   /* ---- twin: sensors, data lines to one panel ---- */
   const HUB = new T.Vector3(W * .5 + .9, roof + 1.55, D * .45);
@@ -993,13 +1030,13 @@
   const size = () => { const w = box.clientWidth, h = box.clientHeight; if (!w || !h) return; R.setSize(w, h, false); const a = w / h, V = Math.max(hh, hw / a); cam.left = cx - V * a; cam.right = cx + V * a; cam.top = cy + V; cam.bottom = cy - V; cam.updateProjectionMatrix(); };
 
   /* ---- toggles ---- */
-  cap && cap.addEventListener('click', e => { const b = e.target.closest('[data-l]'); if (!b) return; const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', on); L[b.dataset.l].visible = on; });
+  cap && cap.addEventListener('click', e => { const b = e.target.closest('[data-l]'); if (!b) return; stopLoop(); if (outAt || !settled) { settled = false; t0 = performance.now() - END * 1000 - 100; } const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', on); L[b.dataset.l].visible = on; });
 
   /* ---- tilt and a limited turn (no drag on phones: it fights scrolling) ---- */
   let yaw = 0, pitch = 0, ty = 0, tp = 0, drag = false, lx = 0, ly = 0;
   if (!phone && !POSTER) {
     addEventListener('pointermove', e => { if (drag) return; const r = box.getBoundingClientRect(); if (r.bottom < 0) return; ty = ((e.clientX - r.left) / r.width - .5) * .32; tp = ((e.clientY - r.top) / r.height - .5) * .1; }, { passive: true });
-    cv.addEventListener('pointerdown', e => { drag = true; lx = e.clientX; ly = e.clientY; cv.setPointerCapture(e.pointerId); });
+    cv.addEventListener('pointerdown', e => { drag = true; stopLoop(); lx = e.clientX; ly = e.clientY; cv.setPointerCapture(e.pointerId); });
     cv.addEventListener('pointermove', e => { if (!drag) return; ty = Math.max(-.44, Math.min(.44, ty + (e.clientX - lx) * .006)); tp = Math.max(-.2, Math.min(.2, tp + (e.clientY - ly) * .003)); lx = e.clientX; ly = e.clientY; });
     addEventListener('pointerup', () => { drag = false; });
   }
@@ -1008,8 +1045,17 @@
   const ease = k => 1 - Math.pow(1 - k, 3), inOut = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
   const back = k => { const c = 1.5; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); };
   const clamp = k => Math.max(0, Math.min(1, k));
-  const STATUS = [[0, 'WIP'], [3.0, 'Shared'], [5.4, 'Published']], CUT0 = .7, CUT1 = 4.9, END = 7;
+  const STATUS = [[0, 'WIP'], [3.0, 'Shared'], [5.4, 'Published']], CUT0 = .7, CUT1 = 4.9, END = 7, REST = 11, OUT = 1.4;
+  const LEADS = ['s', 'm', 't'];
+  items.forEach(it => { it.t0 = it.t; }); sensors.forEach(sn => { sn.t0 = sn.t; });
+  const plan = lead => {
+    items.forEach(it => { it.t = lead === 's' ? it.t0 : it.layer === lead ? Math.max(.6, it.t0 - (lead === 'm' ? 1.9 : 3.6)) : it.layer === 'g' ? it.t0 : it.t0 + .6; });
+    sensors.forEach((sn, k) => { sn.t = lead === 't' ? .8 + k * .12 : lead === 's' ? sn.t0 : sn.t0 + .6; });
+    if (cap) $$('[data-l]', cap).forEach(b => b.classList.toggle('is-lead', b.dataset.l === lead));
+  };
+  let cycle = 0, loop = !POSTER, restAt = 0, outAt = 0, outK = 0;
   const hero = $('#hero'); let t0 = 0, run = false, started = false, settled = false;
+  const stopLoop = () => { loop = false; outAt = 0; outK = 0; if (cap) $$('[data-l]', cap).forEach(b => b.classList.remove('is-lead')); };
   const tmp = new T.Vector3();
   const step = el => {
     items.forEach(it => {
@@ -1034,11 +1080,14 @@
   const frame = now => {
     if (!run) return; requestAnimationFrame(frame);
     const el = POSTER ? 99 : (now - t0) / 1000;
-    if (!settled) { step(el); if (el > END) { settled = true; box.classList.add('is-done'); } }
+    if (!settled) { step(el); if (el > END) { settled = true; restAt = now; box.classList.add('is-done'); if (cap) $$('[data-l]', cap).forEach(b => b.classList.remove('is-lead')); } }
+    else if (loop && !outAt && now - restAt > REST * 1000) outAt = now;
+    if (outAt) { outK = ease(clamp((now - outAt) / (OUT * 1000)));
+      if (outK >= 1) { cycle++; plan(LEADS[cycle % LEADS.length]); outAt = 0; outK = 0; settled = false; t0 = now; step(0); } }
     // scroll: an exploded axonometric, then fade
-    const r = hero.getBoundingClientRect(), ex = clamp(-r.top / (r.height * .8));
+    const r = hero.getBoundingClientRect(), exS = clamp(-r.top / (r.height * .8)), ex = Math.max(exS, outK);
     L.a.position.y = ex * 1.3; L.m.position.y = ex * 2.5; L.t.position.y = ex * 2.5; L.i.position.y = ex * .5;
-    box.style.opacity = 1 - ex * .55;
+    box.style.opacity = Math.min(1 - exS * .55, 1 - outK * .92);
     yaw += (ty - yaw) * .08; pitch += (tp - pitch) * .08; pivot.rotation.set(pitch, yaw, 0);
     root.updateMatrixWorld(true); cut.copy(cutLocal).applyMatrix4(root.matrixWorld);
     // twin: pulsing sensors, a data packet rising on each line
@@ -1060,10 +1109,157 @@
   };
   addEventListener('resize', size); size();
   const begin = () => {
-    if (started) return; started = true; t0 = performance.now(); box.classList.add('is-live');
+    if (started) return; started = true; t0 = performance.now(); box.classList.add('is-live'); if (!POSTER) plan(LEADS[0]);
     new IntersectionObserver(es => { const on = es.some(e => e.isIntersecting); if (on && !run) { run = true; size(); requestAnimationFrame(frame); } else if (!on) run = false; }).observe(hero);
   };
   if (POSTER) { box.classList.add('is-poster'); begin(); window.__h3dShot = () => { R.render(scene, cam); return cv.toDataURL('image/png'); }; return; }
   addEventListener('hero:intro', () => setTimeout(begin, 120), { once: true });
   setTimeout(begin, 2600);   // safety: start even if the intro never reports
+})();
+
+
+/* ===== 2026-11-23 round 7: model views in project sheets, register arrows, certificate journey, record model, portrait and tilt ===== */
+(() => {
+  const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches, motion = !!window.gsap && !reduce;
+  const fine = matchMedia('(pointer: fine)').matches, phone = () => innerWidth <= 820;
+
+  /* model views: one hidden store; each project sheet shows its own */
+  const tpl = $('#views');
+  const VIEWS = tpl ? [...tpl.content.querySelectorAll('figure')].map(f => ({ slug: f.dataset.slug, src: f.querySelector('img').getAttribute('src'), cap: f.querySelector('figcaption').textContent })) : [];
+  window.__views = slug => VIEWS.filter(v => v.slug === slug);
+  const lb = $('.lb'), ov = $('#ov');
+  if (lb && ov) {
+    ov.addEventListener('click', e => {
+      const b = e.target.closest('.ov__v'); if (!b) return;
+      const img = $('img', b); $('img', lb).src = img.src; $('img', lb).alt = img.alt; $('figcaption', lb).textContent = b.dataset.cap;
+      if (lb.showModal) lb.showModal(); else lb.setAttribute('open', '');
+    });
+    lb.addEventListener('close', () => { if (!ov.hidden) { if (window.__lenis) window.__lenis.stop(); document.documentElement.style.overflow = 'hidden'; } });
+  }
+
+  /* skills: each skill its own word (tags on phones), split on commas outside brackets */
+  $$('.sked__s').forEach(td => { td.innerHTML = td.textContent.split(/,\s(?![^()]*\))/).map(t => `<span>${t.replace(/[&<]/g, '')}</span>`).join(''); });
+
+  /* sideways strips: arrows (register and certificates) */
+  const nudge = (view, d, step) => view.scrollBy({ left: d * step(), behavior: reduce ? 'auto' : 'smooth' });
+  const reel = $('.reel');
+  if (reel) $$('.reel__arr[data-d]').forEach(b => b.addEventListener('click', () => nudge(reel, +b.dataset.d, () => { const c = $('.card[data-i]', reel); return c ? (c.getBoundingClientRect().width + 22) * (phone() ? 1 : 2) : 400; })));
+  const cview = $('.ctl__view');
+  if (cview) $$('.reel__arr[data-c]').forEach(b => b.addEventListener('click', () => nudge(cview, +b.dataset.c, () => { const c = $('.ctl__it', cview); return c ? (c.getBoundingClientRect().width + 18) * 3 : 600; })));
+  /* the register no longer hijacks the wheel: vertical scrolling passes straight through it */
+
+  /* certificate journey: the line draws forward, each certificate rises from it; the plane tilts with the mouse */
+  const ctl = $('.ctl');
+  if (ctl) {
+    const its = $$('.ctl__it', ctl), line = $('.ctl__line', ctl), plane = $('.ctl__plane', ctl);
+    if (!motion) its.forEach(i => i.classList.add('in'));
+    else {
+      ctl.classList.add('is-anim');
+      const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px -4% -8% 0px', threshold: .2 });
+      its.forEach((it, k) => { it.style.setProperty('--k', k % 4); io.observe(it); });
+      setTimeout(() => its.forEach(i => { if (i.getBoundingClientRect().top < innerHeight && i.getBoundingClientRect().left < innerWidth) i.classList.add('in'); }), 2500);
+      const prog = () => {
+        if (phone()) { const r = cview.getBoundingClientRect(); line.style.setProperty('--p', Math.max(0, Math.min(1, (innerHeight * .8 - r.top) / r.height)).toFixed(3)); }
+        else { const seen = $$('.ctl__it.in', ctl).length / its.length, sc = (cview.scrollLeft + cview.clientWidth) / cview.scrollWidth; line.style.setProperty('--p', Math.max(seen, Math.min(1, sc * (seen > 0 ? 1 : 0))).toFixed(3)); }
+      };
+      cview.addEventListener('scroll', prog, { passive: true }); addEventListener('scroll', prog, { passive: true }); setInterval(prog, 400); prog();
+      if (fine) {
+        ctl.addEventListener('mousemove', e => { if (phone()) return; const r = ctl.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5; plane.style.setProperty('--ry', (x * 7).toFixed(2) + 'deg'); plane.style.setProperty('--rx', (8 - y * 6).toFixed(2) + 'deg'); });
+        ctl.addEventListener('mouseleave', () => { plane.style.setProperty('--ry', '0deg'); plane.style.setProperty('--rx', '8deg'); });
+      }
+    }
+  }
+
+  /* cursor-aware tilt on the featured pictures (laptops) */
+  if (motion && fine) $$('.spread__fig').forEach(f => {
+    f.addEventListener('mousemove', e => { const r = f.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5; gsap.to(f, { rotateY: x * 8, rotateX: -y * 6, transformPerspective: 1000, duration: .6, ease: 'power3.out' }); });
+    f.addEventListener('mouseleave', () => gsap.to(f, { rotateY: 0, rotateX: 0, duration: .8, ease: 'power3.out' }));
+  });
+
+  /* his portrait: drawn in from a frame, then a slow drift; tilts under the mouse */
+  const ph = $('.profile__photo'), mask = ph && $('.mask', ph), pimg = mask && $('img', mask);
+  if (ph && motion) {
+    ph.classList.add('is-framed');
+    gsap.set(mask, { clipPath: 'inset(0 0 38% 0)' }); gsap.set(pimg, { scale: 1.22, yPercent: 4 });
+    const io = new IntersectionObserver(es => { if (!es.some(e => e.isIntersecting)) return; io.disconnect();
+      gsap.to(mask, { clipPath: 'inset(0 0 0% 0)', duration: 1.3, ease: 'expo.inOut' });
+      gsap.to(pimg, { scale: 1.04, yPercent: 0, duration: 1.8, ease: 'expo.out', onComplete: () => gsap.to(pimg, { scale: 1.1, xPercent: -1.5, duration: 9, ease: 'sine.inOut', yoyo: true, repeat: -1 }) });
+      ph.classList.add('is-in'); }, { rootMargin: '0px 0px -5% 0px' });
+    io.observe(ph);
+    setTimeout(() => { if (getComputedStyle(mask).clipPath.includes('38%') && mask.getBoundingClientRect().top < innerHeight) { gsap.set(mask, { clipPath: 'none' }); gsap.set(pimg, { scale: 1.04, yPercent: 0 }); } }, 4000);
+    if (fine) {
+      ph.addEventListener('mousemove', e => { const r = ph.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5; gsap.to(mask, { rotateY: x * 10, rotateX: -y * 8, duration: .6, ease: 'power3.out', transformPerspective: 900 }); });
+      ph.addEventListener('mouseleave', () => gsap.to(mask, { rotateY: 0, rotateX: 0, duration: .8, ease: 'power3.out' }));
+    }
+  }
+
+  /* the record as a small 3D model: one block per number, they grow when it comes into view; drag to turn */
+  const rm = $('.rm__stage');
+  const gl = (() => { try { const c = document.createElement('canvas'); return !!(window.THREE && (c.getContext('webgl') || c.getContext('experimental-webgl'))); } catch (_) { return false; } })();
+  const DATA = [['10+', 'years in practice', 10], ['20', 'projects', 20], ['2,404', 'deliverables governed', 2404], ['1,360', 'signed metro sheets', 1360], ['15+', 'people led', 15], ['6', 'project countries', 6]];
+  if (rm && !gl) { rm.closest('.rm').classList.add('is-flat'); rm.innerHTML = '<dl>' + DATA.map(([n, l]) => `<div><dt>${n}</dt><dd>${l}</dd></div>`).join('') + '</dl>'; }
+  if (rm && gl) {
+    let built = false;
+    const build = () => {
+      if (built) return; built = true;
+      const T = THREE, cv = document.createElement('canvas'); cv.setAttribute('role', 'img');
+      cv.setAttribute('aria-label', 'Blocks for ' + DATA.map(d => d[0] + ' ' + d[1]).join(', '));
+      rm.append(cv); const tags = document.createElement('div'); tags.className = 'rm__tags'; tags.setAttribute('aria-hidden', 'true'); rm.append(tags);
+      const R = new T.WebGLRenderer({ canvas: cv, antialias: true, alpha: true }); R.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+      const scene = new T.Scene(), cam = new T.OrthographicCamera(-1, 1, 1, -1, -40, 40);
+      scene.add(new T.AmbientLight(0xffffff, .82)); const sun = new T.DirectionalLight(0xffffff, .45); sun.position.set(3, 8, 5); scene.add(sun);
+      const pivot = new T.Group(); scene.add(pivot);
+      const N = DATA.length, gap = 1.1, x0 = -(N - 1) * gap / 2;
+      const base = new T.Mesh(new T.BoxGeometry(N * gap + .5, .08, 1.6), new T.MeshLambertMaterial({ color: 0xEEE9DD }));
+      base.position.y = -.04; base.add(new T.LineSegments(new T.EdgesGeometry(base.geometry), new T.LineBasicMaterial({ color: 0x16181D, transparent: true, opacity: .5 }))); pivot.add(base);
+      const gp = []; for (let i = 0; i <= N; i++) { const x = x0 - gap / 2 + i * gap; gp.push(x, .002, -.8, x, .002, .8); }
+      const gg = new T.BufferGeometry().setAttribute('position', new T.Float32BufferAttribute(gp, 3));
+      const grid = new T.LineSegments(gg, new T.LineDashedMaterial({ color: 0x1D3BC9, dashSize: .06, gapSize: .05, transparent: true, opacity: .5 })); grid.computeLineDistances(); pivot.add(grid);
+      const bars = DATA.map(([n, l, v], i) => {
+        const h = .35 + Math.log10(v + 1) * .95, geo = new T.BoxGeometry(.72, h, .72).translate(0, h / 2, 0);
+        const mat = new T.MeshLambertMaterial({ color: i === 2 || i === 3 ? 0xC9D1EE : 0xE4DED2 });
+        const m = new T.Mesh(geo, mat); m.position.x = x0 + i * gap; m.scale.y = .001;
+        m.add(new T.LineSegments(new T.EdgesGeometry(geo), new T.LineBasicMaterial({ color: 0x16181D, transparent: true, opacity: .8 })));
+        // floor lines on the top face, like a stack of storeys
+        const fl = []; for (let y = .25; y < h - .05; y += .25) fl.push(-.36, y, .361, .36, y, .361, .361, y, -.36, .361, y, .36);
+        if (fl.length) m.add(new T.LineSegments(new T.BufferGeometry().setAttribute('position', new T.Float32BufferAttribute(fl, 3)), new T.LineBasicMaterial({ color: 0x16181D, transparent: true, opacity: .18 })));
+        pivot.add(m);
+        const el = document.createElement('p'); el.className = 'rm__tag'; el.innerHTML = `<b>${n}</b>`; tags.append(el);
+        const lab = document.createElement('p'); lab.className = 'rm__lab'; lab.textContent = l; tags.append(lab);
+        return { m, h, el, lab, mat, k: 0 };
+      });
+      const cam0 = new T.Vector3(5, 4.4, 8.5); cam.position.copy(cam0); cam.lookAt(0, 1.0, 0);
+      const size = () => { const w = rm.clientWidth, hh = rm.clientHeight; if (!w || !hh) return; R.setSize(w, hh, false); const a = w / hh, V = Math.max(2.35, 4.3 / a); cam.left = -V * a; cam.right = V * a; cam.top = V + .1; cam.bottom = -V + .1; cam.updateProjectionMatrix(); };
+      addEventListener('resize', size); size();
+      let yaw = 0, ty = 0, drag = false, lx = 0, t0 = 0, run = false, hover = -1;
+      cv.addEventListener('pointerdown', e => { drag = true; lx = e.clientX; cv.setPointerCapture(e.pointerId); });
+      cv.addEventListener('pointermove', e => { if (drag) { ty = Math.max(-.9, Math.min(.9, ty + (e.clientX - lx) * .008)); lx = e.clientX; } });
+      cv.addEventListener('pointerup', () => { drag = false; }); cv.addEventListener('pointercancel', () => { drag = false; });
+      const ray = new T.Raycaster(), mv = new T.Vector2();
+      cv.addEventListener('mousemove', e => { const r = cv.getBoundingClientRect(); mv.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(mv, cam); const hit = ray.intersectObjects(bars.map(b => b.m), false)[0]; hover = hit ? bars.findIndex(b => b.m === hit.object) : -1; });
+      cv.addEventListener('mouseleave', () => { hover = -1; });
+      const back = k => { const c = 1.4; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); };
+      const tmp = new T.Vector3();
+      const frame = now => {
+        if (!run) return; requestAnimationFrame(frame);
+        const el = reduce ? 99 : (now - t0) / 1000;
+        if (!drag && !reduce) ty += Math.sin(now / 2600) * .0006;
+        yaw += (ty - yaw) * .08; pivot.rotation.y = yaw;
+        const w = rm.clientWidth, hh = rm.clientHeight;
+        bars.forEach((b, i) => {
+          const k = Math.max(0, Math.min(1, (el - .15 - i * .14) / .9)); b.m.scale.y = Math.max(.001, back(k));
+          b.mat.color.setHex(hover === i ? 0x1D3BC9 : (i === 2 || i === 3 ? 0xC9D1EE : 0xE4DED2));
+          tmp.set(b.m.position.x, b.h * b.m.scale.y + .12, 0); pivot.localToWorld(tmp); tmp.project(cam);
+          b.el.style.transform = `translate(${((tmp.x * .5 + .5) * w).toFixed(1)}px, ${((-tmp.y * .5 + .5) * hh).toFixed(1)}px)`;
+          b.el.classList.toggle('on', k > .6); b.el.classList.toggle('hi', hover === i);
+          tmp.set(b.m.position.x, 0, .95); pivot.localToWorld(tmp); tmp.project(cam);
+          b.lab.style.transform = `translate(${((tmp.x * .5 + .5) * w).toFixed(1)}px, ${((-tmp.y * .5 + .5) * hh).toFixed(1)}px)`; b.lab.style.maxWidth = (w / (N + 1.7)).toFixed(0) + 'px'; b.lab.classList.toggle('on', k > .3); b.lab.classList.toggle('hi', hover === i);
+        });
+        R.render(scene, cam);
+      };
+      new IntersectionObserver(es => { const on = es.some(e => e.isIntersecting); if (on && !run) { run = true; if (!t0) t0 = performance.now(); size(); requestAnimationFrame(frame); } else if (!on) run = false; }, { threshold: .25 }).observe(rm);
+    };
+    new IntersectionObserver((es, o) => { if (es.some(e => e.isIntersecting)) { o.disconnect(); build(); } }, { rootMargin: '300px 0px' }).observe(rm);
+  }
 })();
