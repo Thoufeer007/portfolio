@@ -129,7 +129,7 @@
       ['path', { class: 'faint', d: `M0 ${base2} H${W}` }],
       ['path', { class: 'faint', d: `M${l1.x + 4} 0 V${H}` }],
       ['path', { d: `M${l1.x + 4} ${d1} H${l1.x + l1.w} M${l1.x + 4} ${d1 - 6} v12 M${l1.x + l1.w} ${d1 - 6} v12` }],
-      ['text', { x: l1.x + 10, y: d1 - 8 }, 'Architect · Project Management Specialist · Global BIM Management'],
+      ['text', { x: l1.x + 10, y: d1 - 8 }, 'Architect · BIM Manager · Digital Delivery Lead'],
       ['path', { d: `M${l2.x + l2.w * .08} ${d2} H${l2.x + l2.w} M${l2.x + l2.w * .08} ${d2 - 6} v12 M${l2.x + l2.w} ${d2 - 6} v12` }],
       ['text', { x: l2.x + l2.w * .08 + 6, y: d2 + 16 }, W < 600 ? 'SPA New Delhi · UB / Zigurat · Barcelona' : 'SPA New Delhi · Zigurat / Universitat de Barcelona · based in Barcelona'],
     ];
@@ -1210,14 +1210,14 @@
       const scene = new T.Scene(), cam = new T.OrthographicCamera(-1, 1, 1, -1, -40, 40);
       scene.add(new T.AmbientLight(0xffffff, .82)); const sun = new T.DirectionalLight(0xffffff, .45); sun.position.set(3, 8, 5); scene.add(sun);
       const pivot = new T.Group(); scene.add(pivot);
-      const N = DATA.length, gap = 1.1, x0 = -(N - 1) * gap / 2;
+      const N = DATA.length, gap = 1.22, x0 = -(N - 1) * gap / 2;
       const base = new T.Mesh(new T.BoxGeometry(N * gap + .5, .08, 1.6), new T.MeshLambertMaterial({ color: 0xEEE9DD }));
       base.position.y = -.04; base.add(new T.LineSegments(new T.EdgesGeometry(base.geometry), new T.LineBasicMaterial({ color: 0x16181D, transparent: true, opacity: .5 }))); pivot.add(base);
       const gp = []; for (let i = 0; i <= N; i++) { const x = x0 - gap / 2 + i * gap; gp.push(x, .002, -.8, x, .002, .8); }
       const gg = new T.BufferGeometry().setAttribute('position', new T.Float32BufferAttribute(gp, 3));
       const grid = new T.LineSegments(gg, new T.LineDashedMaterial({ color: 0x1D3BC9, dashSize: .06, gapSize: .05, transparent: true, opacity: .5 })); grid.computeLineDistances(); pivot.add(grid);
       const bars = DATA.map(([n, l, v], i) => {
-        const h = .35 + Math.log10(v + 1) * .95, geo = new T.BoxGeometry(.72, h, .72).translate(0, h / 2, 0);
+        const h = .4 + Math.log10(v + 1) * .62, geo = new T.BoxGeometry(.72, h, .72).translate(0, h / 2, 0);
         const mat = new T.MeshLambertMaterial({ color: i === 2 || i === 3 ? 0xC9D1EE : 0xE4DED2 });
         const m = new T.Mesh(geo, mat); m.position.x = x0 + i * gap; m.scale.y = .001;
         m.add(new T.LineSegments(new T.EdgesGeometry(geo), new T.LineBasicMaterial({ color: 0x16181D, transparent: true, opacity: .8 })));
@@ -1225,12 +1225,12 @@
         const fl = []; for (let y = .25; y < h - .05; y += .25) fl.push(-.36, y, .361, .36, y, .361, .361, y, -.36, .361, y, .36);
         if (fl.length) m.add(new T.LineSegments(new T.BufferGeometry().setAttribute('position', new T.Float32BufferAttribute(fl, 3)), new T.LineBasicMaterial({ color: 0x16181D, transparent: true, opacity: .18 })));
         pivot.add(m);
-        const el = document.createElement('p'); el.className = 'rm__tag'; el.innerHTML = `<b>${n}</b>`; tags.append(el);
+        const el = document.createElement('p'); el.className = 'rm__tag'; el.innerHTML = `<b>${n}</b><span>${l}</span>`; tags.append(el);
         const lab = document.createElement('p'); lab.className = 'rm__lab'; lab.textContent = l; tags.append(lab);
         return { m, h, el, lab, mat, k: 0 };
       });
-      const cam0 = new T.Vector3(5, 4.4, 8.5); cam.position.copy(cam0); cam.lookAt(0, 1.0, 0);
-      const size = () => { const w = rm.clientWidth, hh = rm.clientHeight; if (!w || !hh) return; R.setSize(w, hh, false); const a = w / hh, V = Math.max(2.35, 4.3 / a); cam.left = -V * a; cam.right = V * a; cam.top = V + .1; cam.bottom = -V + .1; cam.updateProjectionMatrix(); };
+      const cam0 = new T.Vector3(1.2, 3.2, 9); cam.position.copy(cam0); cam.lookAt(0, 1.25, 0);
+      const size = () => { const w = rm.clientWidth, hh = rm.clientHeight; if (!w || !hh) return; R.setSize(w, hh, false); const a = w / hh, V = Math.max(2.2, 4.2 / a); cam.left = -V * a; cam.right = V * a; cam.top = V * 1.08; cam.bottom = -V * .92; cam.updateProjectionMatrix(); };
       addEventListener('resize', size); size();
       let yaw = 0, ty = 0, drag = false, lx = 0, t0 = 0, run = false, hover = -1;
       cv.addEventListener('pointerdown', e => { drag = true; lx = e.clientX; cv.setPointerCapture(e.pointerId); });
@@ -1239,7 +1239,7 @@
       const ray = new T.Raycaster(), mv = new T.Vector2();
       cv.addEventListener('mousemove', e => { const r = cv.getBoundingClientRect(); mv.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(mv, cam); const hit = ray.intersectObjects(bars.map(b => b.m), false)[0]; hover = hit ? bars.findIndex(b => b.m === hit.object) : -1; });
       cv.addEventListener('mouseleave', () => { hover = -1; });
-      const back = k => { const c = 1.4; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); };
+      const back = k => { const c = .6; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); };
       const tmp = new T.Vector3();
       const frame = now => {
         if (!run) return; requestAnimationFrame(frame);
@@ -1252,7 +1252,7 @@
           b.mat.color.setHex(hover === i ? 0x1D3BC9 : (i === 2 || i === 3 ? 0xC9D1EE : 0xE4DED2));
           tmp.set(b.m.position.x, b.h * b.m.scale.y + .12, 0); pivot.localToWorld(tmp); tmp.project(cam);
           b.el.style.transform = `translate(${((tmp.x * .5 + .5) * w).toFixed(1)}px, ${((-tmp.y * .5 + .5) * hh).toFixed(1)}px)`;
-          b.el.classList.toggle('on', k > .6); b.el.classList.toggle('hi', hover === i);
+          b.el.style.maxWidth = Math.max(70, w / (N + .6)).toFixed(0) + 'px'; b.el.classList.toggle('on', k > .6); b.el.classList.toggle('hi', hover === i);
           tmp.set(b.m.position.x, 0, .95); pivot.localToWorld(tmp); tmp.project(cam);
           b.lab.style.transform = `translate(${((tmp.x * .5 + .5) * w).toFixed(1)}px, ${((-tmp.y * .5 + .5) * hh).toFixed(1)}px)`; b.lab.style.maxWidth = (w / (N + 1.7)).toFixed(0) + 'px'; b.lab.classList.toggle('on', k > .3); b.lab.classList.toggle('hi', hover === i);
         });
@@ -1262,4 +1262,24 @@
     };
     new IntersectionObserver((es, o) => { if (es.some(e => e.isIntersecting)) { o.disconnect(); build(); } }, { rootMargin: '300px 0px' }).observe(rm);
   }
+})();
+
+/* ===== 2026-11-23 round 8: education & credentials — arrows for the certificate row, a single gentle rise ===== */
+(() => {
+  const edc = document.querySelector('.edc'); if (!edc) return;
+  const view = edc.querySelector('.edc__view'), reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  edc.querySelectorAll('.reel__arr[data-e]').forEach(b => b.addEventListener('click', () => { const c = view.querySelector('.edc__c'); view.scrollBy({ left: +b.dataset.e * (c ? (c.getBoundingClientRect().width + 16) * 3 : 500), behavior: reduce ? 'auto' : 'smooth' }); }));
+  if (reduce || !('IntersectionObserver' in window)) return;
+  edc.classList.add('is-anim');
+  const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); edc.classList.add('in'); } }, { rootMargin: '0px 0px -12% 0px' });
+  io.observe(edc); setTimeout(() => { if (edc.getBoundingClientRect().top < innerHeight) edc.classList.add('in'); }, 2500);
+})();
+
+/* round 8: the summary counts up once */
+(() => {
+  const sum = document.querySelector('.edc__sum'); if (!sum || matchMedia('(prefers-reduced-motion: reduce)').matches || !window.gsap) return;
+  const nums = [...sum.querySelectorAll('b[data-n]')]; nums.forEach(b => b.textContent = '0');
+  const io = new IntersectionObserver(es => { if (!es.some(e => e.isIntersecting)) return; io.disconnect();
+    nums.forEach((b, i) => { const o = { v: 0 }; gsap.to(o, { v: +b.dataset.n, duration: 1.2, delay: i * .12, ease: 'power3.out', onUpdate: () => b.textContent = Math.round(o.v) }); }); }, { rootMargin: '0px 0px -10% 0px' });
+  io.observe(sum); setTimeout(() => nums.forEach(b => { if (b.textContent === '0') b.textContent = b.dataset.n; }), 4000);
 })();
