@@ -821,7 +821,7 @@
     form.classList.remove('is-busy');
   });
 })();
-/* ===== 2026-11-23 round 5 hero: a building that assembles like a digital twin (round 6: clear architecture layer + rebuild loop; round 7: louvres) =====
+/* ===== 2026-11-23 round 5 hero: a building that assembles like a digital twin (r6: architecture + rebuild loop; r7: louvres; r9: scan-to-BIM intro, exploded axo, x-ray cut, orbit + IFC hover, live twin) =====
    site and infrastructure > structure > interior > MEP > facade > twin layer, with a section cut sweeping through once.
    Starts only after the name has appeared ('hero:intro'). Reduced motion / no WebGL: the poster stays. */
 (() => {
@@ -865,7 +865,7 @@
     sewer: basic(0xA5533A, 1, false), main: basic(COB, 1, false), pier: mat(0xC8C1B5, 1, false), deck: mat(0xD9D3C7, 1, false),
     sensor: basic(COB, 1, false), halo: basic(COB, .35, false),
   };
-  const items = [];
+  const items = [], PIPES = [];
   const boxB = (w, h, d) => new T.BoxGeometry(w, h, d).translate(0, h / 2, 0);      // base at y = 0
   const boxL = (w, h, d) => new T.BoxGeometry(w, h, d).translate(w / 2, 0, 0);      // starts at x = 0
   const add = (geo, m, x, y, z, layer, t, kind, eo = .7) => {
@@ -880,7 +880,7 @@
   };
   const tube = (pts, r, m, layer, t, dur = 1.1) => {
     const curve = new T.CatmullRomCurve3(pts.map(p => new T.Vector3(...p)), false, 'catmullrom', .02);
-    const g = new T.TubeGeometry(curve, 90, r, 8, false), mesh = new T.Mesh(g, m); L[layer].add(mesh);
+    const g = new T.TubeGeometry(curve, 90, r, 8, false), mesh = new T.Mesh(g, m); L[layer].add(mesh); if (layer === 'm') PIPES.push(curve);
     g.setDrawRange(0, 0); items.push({ mesh, t, kind: 'draw', total: g.index.count, dur, layer }); return mesh;
   };
 
@@ -1029,16 +1029,78 @@
   const cx = (ext.x0 + ext.x1) / 2, cy = (ext.y0 + ext.y1) / 2, hw = (ext.x1 - ext.x0) / 2 * 1.03, hh = (ext.y1 - ext.y0) / 2 * 1.04;
   const size = () => { const w = box.clientWidth, h = box.clientHeight; if (!w || !h) return; R.setSize(w, h, false); const a = w / h, V = Math.max(hh, hw / a); cam.left = cx - V * a; cam.right = cx + V * a; cam.top = cy + V; cam.bottom = cy - V; cam.updateProjectionMatrix(); };
 
+  /* ---- r9: IFC names for hover ---- */
+  const IFC = new Map([[M.pad, 'IfcFooting'], [M.conc, 'IfcColumn'], [M.slab, 'IfcSlab'], [M.roofS, 'IfcSlab · roof'], [M.core, 'IfcWall · core'], [M.glass, 'IfcCurtainWall'], [M.glassD, 'IfcDoor · entrance'],
+    [M.wall, 'IfcWall'], [M.fin, 'IfcShadingDevice'], [M.canopy, 'IfcRoof · canopy'], [M.parapet, 'IfcRailing'], [M.deck, 'IfcSlab · terrace'], [M.part, 'IfcWall · partition'], [M.furn, 'IfcFurniture'],
+    [M.table, 'IfcFurniture · table'], [M.lift, 'IfcTransportElement'], [M.pipe, 'IfcPipeSegment'], [M.duct, 'IfcDuctSegment'], [M.tray, 'IfcCableCarrierSegment'], [M.plant, 'IfcUnitaryEquipment'],
+    [M.ground, 'IfcSite'], [M.road, 'IfcRoad'], [M.kerb, 'IfcKerb'], [M.pier, 'IfcColumn · viaduct pier'], [M.deck2 || M.deck, 'IfcSlab'], [M.main, 'IfcPipeSegment · water main'], [M.sewer, 'IfcPipeSegment · sewer']]);
+  const LNAME = { g: 'Site', s: 'Structure', a: 'Architecture', i: 'Interior', m: 'MEP', t: 'Twin' };
+  const layerOf = o => { let p = o; while (p && !Object.keys(L).some(k => L[k] === p)) p = p.parent; return p ? Object.keys(L).find(k => L[k] === p) : null; };
+  const pickables = []; root.traverse(o => { if (o.isMesh && IFC.has(o.material)) pickables.push(o); });
+
+  /* ---- r9: scan-to-BIM intro — the finished model first appears as a point cloud ---- */
+  const SCAN = POSTER ? 0 : 2.4, NP = phone ? 3200 : 9000;
+  scene.updateMatrixWorld(true);
+  const rootInv = root.matrixWorld.clone().invert(), tris = []; let area = 0;
+  const va = new T.Vector3(), vb = new T.Vector3(), vc = new T.Vector3(), e1 = new T.Vector3(), e2 = new T.Vector3();
+  pickables.forEach(o => {
+    if (o.isInstancedMesh || !o.geometry.index) return;
+    const w = layerOf(o) === 'g' ? .22 : 1, mw = rootInv.clone().multiply(o.matrixWorld), pa = o.geometry.attributes.position, ix = o.geometry.index.array;
+    for (let i = 0; i < ix.length; i += 3) {
+      va.fromBufferAttribute(pa, ix[i]).applyMatrix4(mw); vb.fromBufferAttribute(pa, ix[i + 1]).applyMatrix4(mw); vc.fromBufferAttribute(pa, ix[i + 2]).applyMatrix4(mw);
+      const ar = e1.subVectors(vb, va).cross(e2.subVectors(vc, va)).length() / 2 * w; if (ar < 1e-5) continue;
+      area += ar; tris.push([area, va.clone(), vb.clone(), vc.clone()]);
+    }
+  });
+  const pick = x => { let lo = 0, hi = tris.length - 1; while (lo < hi) { const mid = (lo + hi) >> 1; if (tris[mid][0] < x) lo = mid + 1; else hi = mid; } return tris[lo]; };
+  const pts = [];
+  for (let n = 0; n < NP && tris.length; n++) { const [, A, Bv, C] = pick(Math.random() * area); let u = Math.random(), v = Math.random(); if (u + v > 1) { u = 1 - u; v = 1 - v; } pts.push(new T.Vector3().copy(A).addScaledVector(e1.subVectors(Bv, A), u).addScaledVector(e2.subVectors(C, A), v)); }
+  pts.sort((p, q) => p.y - q.y);
+  const tgt = new Float32Array(pts.length * 3), jit = new Float32Array(pts.length * 3), cpos = new Float32Array(pts.length * 3);
+  pts.forEach((p, i) => { tgt.set([p.x, p.y, p.z], i * 3); jit.set([(Math.random() - .5) * .9, (Math.random() - .2) * .7, (Math.random() - .5) * .9], i * 3); });
+  const cg = new T.BufferGeometry(); cg.setAttribute('position', new T.BufferAttribute(cpos, 3)); cg.setDrawRange(0, 0);
+  const cloud = new T.Points(cg, new T.PointsMaterial({ color: COB, size: phone ? 1.7 : 1.9, sizeAttenuation: false, transparent: true, opacity: 0, depthWrite: false }));
+  cloud.frustumCulled = false; root.add(cloud); cloud.visible = !POSTER;
+  const scanLbl = document.createElement('p'); scanLbl.className = 'h3d__scan'; scanLbl.innerHTML = '<i></i>Scan · <b>0</b> points → BIM'; box.append(scanLbl);
+  const cloudStep = el => {
+    if (!cloud.visible) return;
+    if (el > SCAN + 3.6) { cloud.visible = false; scanLbl.classList.remove('on'); return; }
+    const n = Math.floor(pts.length * ease(clamp(el / 1.4))), j = 1 - ease(clamp((el - .25) / 1.9));
+    for (let i = 0; i < n * 3; i++) cpos[i] = tgt[i] + jit[i] * j;
+    cg.attributes.position.needsUpdate = true; cg.setDrawRange(0, n);
+    cloud.material.opacity = el < SCAN ? .9 : .9 * (1 - clamp((el - SCAN) / 3.4));
+    scanLbl.classList.toggle('on', el < SCAN + .8); scanLbl.querySelector('b').textContent = n.toLocaleString('en-US');
+  };
+
+  /* ---- r9: exploded axonometric on scroll, with leader labels ---- */
+  const XL = [['s', 'Structure', new T.Vector3(W, fl(1) + .2, 0)], ['i', 'Interior', new T.Vector3(W, ft(1) + .4, D * .3)], ['m', 'MEP', new T.Vector3(W - .35, yC(1), .35)],
+              ['a', 'Architecture', new T.Vector3(W + .15, roof + .3, D * .2)], ['t', 'Twin', HUB]];
+  const XLIFT = { g: 0, s: 0, i: .9, m: 2.0, a: 3.1, t: 3.6 };
+  XL.forEach(x => { x.el = document.createElement('p'); x.el.className = 'h3d__xl'; x.el.innerHTML = `<i></i><span>${x[1]}</span>`; tagLayer.append(x.el); });
+  let camEx = -1;
+  const camFit = ex => { if (Math.abs(ex - camEx) < .002) return; camEx = ex; const w = box.clientWidth, h = box.clientHeight; if (!w || !h) return; const a = w / h, V = Math.max(hh, hw / a) * (1 + ex * .72), yy = cy + ex * 1.75; cam.left = cx - V * a; cam.right = cx + V * a; cam.top = yy + V; cam.bottom = yy - V; cam.updateProjectionMatrix(); };
+
+  /* ---- r9: live twin — pulses along the MEP runs, small live readings ---- */
+  const pulses = []; PIPES.forEach((c, k) => { for (let j = 0; j < (phone ? 1 : 2); j++) { const m = new T.Mesh(new T.SphereGeometry(.045, 8, 6), basic(0x7F93FF, 1, true)); m.visible = false; L.m.add(m); pulses.push({ m, c, o: j * .5 + k * .17 }); } });
+  const READ = [[1, '°C', 21.4, .3], [4, 'kWh', 3.2, .2], [2, '%RH', 46, 2]].filter(x => x[0] < SENS.length).map(([si, u, v0, d]) => { const el = document.createElement('p'); el.className = 'h3d__val'; tagLayer.append(el); return { si, u, v: v0, v0, d, el, next: 0 }; });
+
+  /* ---- r9: hover an element: cobalt outline + its IFC tag ---- */
+  const ifcTag = document.createElement('p'); ifcTag.className = 'h3d__ifc'; tagLayer.append(ifcTag);
+  const lineCob = new T.LineBasicMaterial({ color: COB, transparent: true, opacity: 1, clippingPlanes: CL });
+  const ray = new T.Raycaster(), mouse = new T.Vector2(); let over = false, hot = null, hotEdge = null, hotMat = null, mx = .5;
+
   /* ---- toggles ---- */
   cap && cap.addEventListener('click', e => { const b = e.target.closest('[data-l]'); if (!b) return; stopLoop(); if (outAt || !settled) { settled = false; t0 = performance.now() - END * 1000 - 100; } const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', on); L[b.dataset.l].visible = on; });
 
   /* ---- tilt and a limited turn (no drag on phones: it fights scrolling) ---- */
-  let yaw = 0, pitch = 0, ty = 0, tp = 0, drag = false, lx = 0, ly = 0;
+  let yaw = 0, pitch = 0, ty = 0, tp = 0, drag = false, lx = 0, ly = 0, lastDrag = -1e9;
   if (!phone && !POSTER) {
-    addEventListener('pointermove', e => { if (drag) return; const r = box.getBoundingClientRect(); if (r.bottom < 0) return; ty = ((e.clientX - r.left) / r.width - .5) * .32; tp = ((e.clientY - r.top) / r.height - .5) * .1; }, { passive: true });
+    addEventListener('pointermove', e => { if (drag || performance.now() - lastDrag < 3000) return; const r = box.getBoundingClientRect(); if (r.bottom < 0) return; ty = Math.max(-.22, Math.min(.22, ((e.clientX - r.left) / r.width - .5) * .32)); tp = Math.max(-.08, Math.min(.08, ((e.clientY - r.top) / r.height - .5) * .1)); }, { passive: true });
     cv.addEventListener('pointerdown', e => { drag = true; stopLoop(); lx = e.clientX; ly = e.clientY; cv.setPointerCapture(e.pointerId); });
-    cv.addEventListener('pointermove', e => { if (!drag) return; ty = Math.max(-.44, Math.min(.44, ty + (e.clientX - lx) * .006)); tp = Math.max(-.2, Math.min(.2, tp + (e.clientY - ly) * .003)); lx = e.clientX; ly = e.clientY; });
-    addEventListener('pointerup', () => { drag = false; });
+    cv.addEventListener('pointermove', e => { const rb = cv.getBoundingClientRect(); mouse.set((e.clientX - rb.left) / rb.width * 2 - 1, -(e.clientY - rb.top) / rb.height * 2 + 1); mx = (e.clientX - rb.left) / rb.width; over = true;
+      if (!drag) return; lastDrag = performance.now(); ty = Math.max(-1.25, Math.min(1.25, ty + (e.clientX - lx) * .007)); tp = Math.max(-.3, Math.min(.3, tp + (e.clientY - ly) * .003)); lx = e.clientX; ly = e.clientY; });
+    cv.addEventListener('pointerleave', () => { over = false; });
+    addEventListener('pointerup', () => { if (drag) lastDrag = performance.now(); drag = false; });
   }
 
   /* ---- motion ---- */
@@ -1074,28 +1136,36 @@
     cutLocal.constant = kc >= 1 ? 99 : X0 - .2 + inOut(kc) * (X1 + .4 - X0);
     sec.visible = kc > 0 && kc < 1; sec.position.x = cutLocal.constant;
     sec.material.opacity = .8 * Math.min(1, (1 - kc) * 6);
-    const s = STATUS.filter(x => el >= x[0]).pop()[1];
+    const s = (STATUS.filter(x => el >= x[0]).pop() || STATUS[0])[1];
     if (chip.textContent !== s) { chip.textContent = s; chip.parentElement.dataset.s = s; }
   };
   const frame = now => {
     if (!run) return; requestAnimationFrame(frame);
-    const el = POSTER ? 99 : (now - t0) / 1000;
-    if (!settled) { step(el); if (el > END) { settled = true; restAt = now; box.classList.add('is-done'); if (cap) $$('[data-l]', cap).forEach(b => b.classList.remove('is-lead')); } }
+    const el = POSTER ? 99 : (now - t0) / 1000, off = cycle === 0 ? SCAN : 0, eb = el - off;
+    if (cycle === 0) cloudStep(el);
+    if (!settled) { step(eb); if (eb > END) { settled = true; restAt = now; box.classList.add('is-done'); if (cap) $$('[data-l]', cap).forEach(b => b.classList.remove('is-lead')); } }
     else if (loop && !outAt && now - restAt > REST * 1000) outAt = now;
     if (outAt) { outK = ease(clamp((now - outAt) / (OUT * 1000)));
       if (outK >= 1) { cycle++; plan(LEADS[cycle % LEADS.length]); outAt = 0; outK = 0; settled = false; t0 = now; step(0); } }
     // scroll: an exploded axonometric, then fade
-    const r = hero.getBoundingClientRect(), exS = clamp(-r.top / (r.height * .8)), ex = Math.max(exS, outK);
-    L.a.position.y = ex * 1.3; L.m.position.y = ex * 2.5; L.t.position.y = ex * 2.5; L.i.position.y = ex * .5;
-    box.style.opacity = Math.min(1 - exS * .55, 1 - outK * .92);
-    yaw += (ty - yaw) * .08; pitch += (tp - pitch) * .08; pivot.rotation.set(pitch, yaw, 0);
+    const r = hero.getBoundingClientRect(), exS = ease(clamp(Math.max(-r.top, scrollY) / (r.height * .5))), ex = Math.max(exS, outK);
+    Object.keys(XLIFT).forEach(k => { L[k].position.y = ex * XLIFT[k]; });
+    camFit(exS); box.style.opacity = Math.min(1 - exS * .2, 1 - outK * .92);
+    // x-ray: once built, a section plane follows the cursor (phones: one slow sweep while it rests)
+    if (settled && !outAt) { let tx = 99;
+      if (!phone && over && !drag) tx = X0 + .2 + mx * (X1 - X0 + .2);
+      else if (phone) { const q = (now - restAt) / 1000 - 1.5; if (q > 0 && q < 7) tx = X0 + (X1 - X0) * (.62 + .38 * Math.cos(q / 7 * Math.PI * 2)); }
+      const c0 = cutLocal.constant > 50 ? X1 + .3 : cutLocal.constant; cutLocal.constant = tx > 50 ? (c0 > X1 + .25 ? 99 : c0 + (X1 + .4 - c0) * .14) : c0 + (tx - c0) * .16;
+      sec.visible = cutLocal.constant < X1 + .2; sec.position.x = cutLocal.constant; sec.material.opacity = .65; }
+    if (!drag && lastDrag > 0 && now - lastDrag > 3000) { ty = 0; tp = 0; lastDrag = -1e9; }   // ease back home after 3 s
+    yaw += (ty - yaw) * .06; pitch += (tp - pitch) * .06; pivot.rotation.set(pitch, yaw, 0);
     root.updateMatrixWorld(true); cut.copy(cutLocal).applyMatrix4(root.matrixWorld);
     // twin: pulsing sensors, a data packet rising on each line
     sensors.forEach(sn => {
-      const on = el > sn.t; sn.dot.visible = sn.halo.visible = sn.pk.visible = on; if (!on) return;
+      const on = eb > sn.t; sn.dot.visible = sn.halo.visible = sn.pk.visible = on; if (!on) return;
       const k = POSTER ? 0 : ((now / 1000 + sn.ph) % 2.4) / 2.4;
       sn.halo.scale.setScalar(1 + k * 2.6); sn.halo.material.opacity = .4 * (1 - k);
-      sn.pk.visible = !POSTER && el > sn.t + .9; sn.pk.position.lerpVectors(sn.a, sn.b, (k * 1.4) % 1);
+      sn.pk.visible = !POSTER && eb > sn.t + .9; sn.pk.position.lerpVectors(sn.a, sn.b, (k * 1.4) % 1);
     });
     // labels follow their points
     const w = box.clientWidth, h = box.clientHeight;
@@ -1103,11 +1173,30 @@
       tmp.copy(g.at); root.localToWorld(tmp); tmp.y += L[g.layer].position.y; tmp.project(cam);
       g.el.style.transform = `translate(${(tmp.x * .5 + .5) * w}px, ${(-tmp.y * .5 + .5) * h}px)`;
       if (!g.cls) g.el.classList.toggle('left', tmp.x * .5 + .5 > .56);
-      g.el.classList.toggle('on', !POSTER && el > g.t && L[g.layer].visible && ex < .3);
+      g.el.classList.toggle('on', !POSTER && eb > g.t && L[g.layer].visible && ex < .3 && !hot);
     });
+    // exploded labels
+    XL.forEach(x => { tmp.copy(x[2]); root.localToWorld(tmp); tmp.y += L[x[0]].position.y; tmp.project(cam);
+      x.el.style.transform = `translate(${((tmp.x * .5 + .5) * w).toFixed(1)}px, ${((-tmp.y * .5 + .5) * h).toFixed(1)}px)`; x.el.classList.toggle('on', exS > .14 && L[x[0]].visible); });
+    // live twin
+    const live = !POSTER && settled && L.m.visible && ex < .3;
+    pulses.forEach(p => { p.m.visible = live; if (live) p.m.position.copy(p.c.getPointAt(((now / 1000) * .16 + p.o) % 1)); });
+    READ.forEach(rd => { const sn = sensors[rd.si]; const on = !POSTER && L.t.visible && eb > sn.t + 1 && ex < .3 && !hot;
+      rd.el.classList.toggle('on', on); if (!on) return;
+      if (now > rd.next) { rd.v = Math.max(rd.v0 - rd.d * 3, Math.min(rd.v0 + rd.d * 3, rd.v + (Math.random() - .5) * rd.d)); rd.el.textContent = (rd.u === '%RH' ? Math.round(rd.v) : rd.v.toFixed(1)) + ' ' + rd.u; rd.next = now + 1800 + Math.random() * 900; }
+      tmp.copy(sn.a); root.localToWorld(tmp); tmp.y += L.t.position.y; tmp.project(cam); rd.el.style.transform = `translate(${((tmp.x * .5 + .5) * w).toFixed(1)}px, ${((-tmp.y * .5 + .5) * h).toFixed(1)}px)`; });
+    // hover: outline + IFC tag
+    let hit = null;
+    if (!phone && over && !drag && settled && !outAt && exS < .05) { ray.setFromCamera(mouse, cam);
+      hit = ray.intersectObjects(pickables, false).find(x => { if (!x.object.visible) return false; const k = layerOf(x.object); if (!k || !L[k].visible) return false; if (x.object.material.clippingPlanes && cutLocal.constant < 50) { tmp.copy(x.point); root.worldToLocal(tmp); if (tmp.x > cutLocal.constant) return false; } return true; }) || null; }
+    const ho = hit ? hit.object : null;
+    if (ho !== hot) { if (hotEdge) hotEdge.material = hotMat; hot = ho; hotEdge = ho && ho.children.find(c => c.isLineSegments); if (hotEdge) { hotMat = hotEdge.material; hotEdge.material = lineCob; } cv.style.cursor = ho ? 'pointer' : ''; }
+    if (hit) { const k = layerOf(ho); ifcTag.innerHTML = `<b>${IFC.get(ho.material)}</b><span>${LNAME[k]} · ${chip.textContent}</span>`; tmp.copy(hit.point).project(cam);
+      ifcTag.style.transform = `translate(${((tmp.x * .5 + .5) * w).toFixed(1)}px, ${((-tmp.y * .5 + .5) * h).toFixed(1)}px)`; }
+    ifcTag.classList.toggle('on', !!hit);
     R.render(scene, cam);
   };
-  addEventListener('resize', size); size();
+  addEventListener('resize', () => { camEx = -1; }); addEventListener('resize', size); size();
   const begin = () => {
     if (started) return; started = true; t0 = performance.now(); box.classList.add('is-live'); if (!POSTER) plan(LEADS[0]);
     new IntersectionObserver(es => { const on = es.some(e => e.isIntersecting); if (on && !run) { run = true; size(); requestAnimationFrame(frame); } else if (!on) run = false; }).observe(hero);
@@ -1116,7 +1205,6 @@
   addEventListener('hero:intro', () => setTimeout(begin, 120), { once: true });
   setTimeout(begin, 2600);   // safety: start even if the intro never reports
 })();
-
 
 /* ===== 2026-11-23 round 7: model views in project sheets, register arrows, certificate journey, record model, portrait and tilt ===== */
 (() => {
@@ -1282,4 +1370,43 @@
   const io = new IntersectionObserver(es => { if (!es.some(e => e.isIntersecting)) return; io.disconnect();
     nums.forEach((b, i) => { const o = { v: 0 }; gsap.to(o, { v: +b.dataset.n, duration: 1.2, delay: i * .12, ease: 'power3.out', onUpdate: () => b.textContent = Math.round(o.v) }); }); }, { rootMargin: '0px 0px -10% 0px' });
   io.observe(sum); setTimeout(() => nums.forEach(b => { if (b.textContent === '0') b.textContent = b.dataset.n; }), 4000);
+})();
+
+/* round 8c (PC-LEGION): degree and certificate sliders, arrows always visible */
+(function(){var rm=matchMedia('(prefers-reduced-motion: reduce)').matches;document.querySelectorAll('.edc [data-v]').forEach(function(v){var t=v.getAttribute('data-v'),bs=document.querySelectorAll('.edc .reel__arr[data-t="'+t+'"]');function up(){var m=v.scrollWidth-v.clientWidth-2;bs.forEach(function(b){b.disabled=(+b.dataset.s<0)?v.scrollLeft<=2:v.scrollLeft>=m;});}bs.forEach(function(b){b.addEventListener('click',function(){var it=v.querySelector('li');var w=it?it.getBoundingClientRect().width+16:300;v.scrollBy({left:+b.dataset.s*w,behavior:rm?'auto':'smooth'});});});v.addEventListener('scroll',up,{passive:true});addEventListener('resize',up);setTimeout(up,300);up();});})();
+
+/* ===== round 9b: career line (replaces the 3D record model) and the three-discipline diagram ===== */
+(() => {
+  const $ = (q, r = document) => r.querySelector(q), $$ = (q, r = document) => [...r.querySelectorAll(q)];
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const box = $('.cl__chart');
+  if (box) {
+    const Y0 = 2012.5, Y1 = 2027;
+    const LANES = [['Study', [[2012.5, 2017.5, 'B.Arch · SPA New Delhi'], [2019.5, 2021.5, 'M.BEM · SPA New Delhi'], [2025.3, 2026.3, "Master's · UB · Zigurat"]]],
+      ['Design', [[2013.45, 2017.45, 'Freelance architect and 3D visualiser'], [2017.45, 2027, 'Novacasa Builders, Kerala (co-runs)']]],
+      ['Site and PM', [[2017.45, 2019.55, 'Built Well · site project manager'], [2024.1, 2024.65, 'CBRE · project manager']]],
+      ['BIM and digital', [[2021.45, 2024.1, 'Techture · BIM coordinator'], [2024.6, 2025.55, 'The Blue Khirki · consultant'], [2025.5, 2025.72, 'Scruffy Dog · Qiddiya'], [2025.7, 2027, 'Elastic Potential · digital delivery lead']]]];
+    const draw = () => {
+    const W = Math.max(300, box.clientWidth - 24), LW = W < 520 ? 74 : 120, LH = 46, TOP = 8, H = TOP + LANES.length * LH + 30, X = y => LW + (y - Y0) / (Y1 - Y0) * (W - LW - 10), step = W < 520 ? 3 : 2;
+    let g = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" class="cl__svg" role="img" aria-label="Career from 2013 to now in four lanes: study, design, site and project management, BIM and digital">`;
+    for (let y = 2013; y <= 2026; y++) g += `<line class="cl__tick" x1="${X(y)}" y1="${TOP}" x2="${X(y)}" y2="${H - 24}"/>` + ((y - 2013) % step === 0 ? `<text class="cl__yr" x="${X(y)}" y="${H - 8}">${W < 520 ? "'" + String(y).slice(2) : y}</text>` : '');
+    g += `<line class="cl__now" x1="${X(2026.9)}" y1="${TOP - 4}" x2="${X(2026.9)}" y2="${H - 24}"/>`;
+    LANES.forEach(([name, bars], i) => {
+      const y = TOP + i * LH;
+      g += `<text class="cl__lane" x="0" y="${y + 27}">${W < 520 ? name.replace('Site and PM', 'Site/PM').replace('BIM and digital', 'BIM/digital') : name}</text><line class="cl__base" x1="${LW}" y1="${y + 40}" x2="${W - 10}" y2="${y + 40}"/>`;
+      bars.forEach(([a, b, t], j) => g += `<g class="cl__bar l${i}" tabindex="0" data-t="${t} · ${Math.floor(a) === Math.floor(b) ? Math.floor(a) : Math.floor(a) + ' – ' + (b >= 2026.9 ? 'now' : Math.floor(b))}"><rect x="${X(a)}" y="${y + 10}" width="${Math.max(3, X(b) - X(a) - 2)}" height="24" style="--d:${(i * .12 + j * .1).toFixed(2)}s"/>${X(b) - X(a) > t.split(' · ')[0].length * 6.6 + 14 ? `<text class="cl__bt" x="${X(a) + 6}" y="${y + 26}">${t.split(' · ')[0]}</text>` : ''}</g>`);
+    });
+    box.innerHTML = g + '</svg><p class="cl__tip" aria-live="polite">Tap or hover a bar</p>';
+    const tip = $('.cl__tip', box);
+    $$('.cl__bar', box).forEach(b => { const show = () => { $$('.cl__bar', box).forEach(x => x.classList.toggle('on', x === b)); tip.textContent = b.dataset.t; };
+      b.addEventListener('mouseenter', show); b.addEventListener('focus', show); b.addEventListener('click', show); });
+    };
+    draw(); let rz, lw = innerWidth; addEventListener('resize', () => { if (innerWidth === lw) return; lw = innerWidth; clearTimeout(rz); rz = setTimeout(draw, 200); });
+    if (!reduce && 'IntersectionObserver' in window) { box.classList.add('is-anim'); const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); box.classList.add('in'); } }, { threshold: .3 }); io.observe(box); setTimeout(() => box.classList.add('in'), 5000); }
+  }
+  const v = $('.venn');
+  if (v) {
+    $$('.venn__c', v).forEach(c => { c.addEventListener('mouseenter', () => v.dataset.h = c.dataset.k); c.addEventListener('mouseleave', () => delete v.dataset.h); });
+    if (!reduce && 'IntersectionObserver' in window) { v.classList.add('is-anim'); const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); v.classList.add('in'); } }, { threshold: .3 }); io.observe(v); setTimeout(() => v.classList.add('in'), 5000); }
+  }
 })();
