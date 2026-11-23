@@ -150,12 +150,13 @@
     return gsap.to(paths, { strokeDashoffset: 0, duration: 1.1, ease: 'power2.inOut', stagger: .06, ...opt });
   };
 
-  const fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+  const fontsReady = Promise.race([(document.fonts && document.fonts.ready) || Promise.resolve(), new Promise(r => setTimeout(r, 450))]);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => setTimeout(() => { try { buildLines(); } catch (_) {} }, 60));
   fontsReady.then(() => {
     buildLines();
     $$('.hero__line').forEach(splitChars);
     $$('[data-split-words]').forEach(splitWords);
-    if (!motion) { if (hasGsap) ScrollTrigger.refresh(); return; }
+    if (!motion) { if (hasGsap) ScrollTrigger.refresh(); dispatchEvent(new Event('hero:intro')); return; }
     initMotion();
   });
 
@@ -163,13 +164,12 @@
     /* hero intro */
     const tl = gsap.timeline({ defaults: { ease: 'expo.out' } });
     tl.from('.grid-bg', { opacity: 0, duration: 1.2, ease: 'power1.out' }, 0)
-      .from('.hero__line .ch > span', { yPercent: 115, duration: 1.3, stagger: .035 }, .1)
-      .add(drawPaths($$('path', heroSvg), { duration: 1.2, stagger: .08 }), .5)
-      .from($$('text, circle', heroSvg), { opacity: 0, duration: .6, stagger: .08, ease: 'power1.out' }, 1.2)
-      .add(drawPaths($$('.cut .draw'), { duration: 1.3, stagger: .05 }), .7)
-      .from('.cut .fillin', { opacity: 0, duration: .8, stagger: .03, ease: 'power1.out' }, 2.0)
-      .to('.hero [data-reveal]', { opacity: 1, y: 0, duration: 1, stagger: .1 }, 1.0)
-      .from('.hero__top', { opacity: 0, y: -10, duration: .8 }, .3);
+      .from('.hero__line .ch > span', { yPercent: 115, duration: .95, stagger: .02 }, .05)
+      .add(drawPaths($$('path', heroSvg), { duration: 1, stagger: .06 }), .35)
+      .from($$('text, circle', heroSvg), { opacity: 0, duration: .5, stagger: .06, ease: 'power1.out' }, .9)
+      .to('.hero [data-reveal]', { opacity: 1, y: 0, duration: .8, stagger: .08 }, .55)
+      .from('.hero__top', { opacity: 0, y: -10, duration: .7 }, .2)
+      .call(() => dispatchEvent(new Event('hero:intro')), null, 1.3);
 
     /* reveals */
     $$('[data-reveal]').filter(el => !el.closest('.hero')).forEach(el =>
@@ -182,6 +182,7 @@
       gsap.fromTo(m, { clipPath: 'inset(100% 0 0 0)' }, { clipPath: 'inset(0% 0 0 0)', duration: 1.3, ease: 'expo.inOut', scrollTrigger: { trigger: m, start: 'top 85%', once: true } });
       gsap.fromTo($('img', m), { scale: 1.3 }, { scale: 1, duration: 1.8, ease: 'expo.out', scrollTrigger: { trigger: m, start: 'top 85%', once: true } });
     });
+    if (SMALL) $$('.sheet .mask img').forEach(img => gsap.fromTo(img, { scale: 1.14 }, { scale: 1, ease: 'none', scrollTrigger: { trigger: img.closest('.mask'), start: 'top bottom', end: 'bottom 35%', scrub: .4 } }));
     /* safety net: any picture on screen that is still clipped after 1.2 s is shown */
     if ('IntersectionObserver' in window) {
       const io = new IntersectionObserver(es => es.forEach(en => {
@@ -741,7 +742,10 @@
     { d: 'Oct 2026', t: 'One wall. Two asset codes. Which one should you trust?', url: FEED },
   ];
   const row = $('.posts__row');
-  if (row) row.innerHTML = POSTS.map(p => `<li><a class="pc" href="${esc(p.url)}" target="_blank" rel="noopener"><span class="pc__d">Post · ${esc(p.d)}</span><span class="pc__t">${esc(p.t)}</span><span class="pc__o">Open on LinkedIn →</span></a></li>`).join('');
+  if (row) row.innerHTML = POSTS.slice(0, 3).map(p => `<li><a class="pc" href="${esc(p.url)}" target="_blank" rel="noopener"><span class="pc__d">Post · ${esc(p.d)}</span><span class="pc__t">${esc(p.t)}</span><span class="pc__o">Open on LinkedIn →</span></a></li>`).join('');
+
+  const more = $('.voices__more button');
+  if (more) more.addEventListener('click', () => { const v = $('.voices'), on = !v.classList.contains('is-all'); v.classList.toggle('is-all', on); more.setAttribute('aria-expanded', on); more.textContent = on ? 'Show fewer' : 'Two more recommendations'; if (window.ScrollTrigger) ScrollTrigger.refresh(); });
 
   /* footer: project buttons open their sheet */
   $$('[data-open]').forEach(b => b.addEventListener('click', () => window.__openOv && window.__openOv(b.dataset.open, b)));
@@ -761,12 +765,25 @@
   $('.cvd__x', dlg).addEventListener('click', close);
   dlg.addEventListener('click', e => { if (e.target === dlg) close(); });
   document.addEventListener('click', e => { const b = e.target.closest('.cv-open'); if (b) { e.preventDefault(); open(b); } });
+  const eErr = $('.cvd__err', dlg), eIn = form.email;
+  const clearE = () => { if (!eErr) return; eErr.hidden = true; eErr.textContent = ''; eIn.removeAttribute('aria-invalid'); };
+  eIn.addEventListener('input', clearE);
+  const errEmail = t => {
+    if (!eErr) return false; msg.textContent = ''; msg.className = 'cvd__msg';
+    const m = /^did you mean\s+([^\s?]+@[^\s?]+?)\s*\??\s*$/i.exec(String(t).trim());
+    eErr.innerHTML = m ? `Did you mean <button type="button" class="cvd__fix">${esc(m[1])}</button>?` : esc(t);
+    if (m) $('.cvd__fix', eErr).addEventListener('click', () => { eIn.value = m[1]; clearE(); eIn.focus(); });
+    eErr.hidden = false; eIn.setAttribute('aria-invalid', 'true'); eIn.focus(); return true;
+  };
+  const isEmailErr = t => /did you mean|e-?mail|mailbox|domain|address|disposable|throwaway/i.test(String(t || ''));
   form.addEventListener('submit', async e => {
     e.preventDefault();
     const f = new FormData(form), v = k => String(f.get(k) || '').trim();
     const name = v('name'), email = v('email'), company = v('company');
     const err = t => { msg.textContent = t; msg.className = 'cvd__msg is-err'; };
-    if (!name || !company || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return err('Please fill in your name, a valid email and your company.');
+    clearE();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return errEmail('Please enter a valid email address.');
+    if (!name || !company) return err('Please fill in your name and your company.');
     msg.textContent = 'Opening the CV…'; msg.className = 'cvd__msg'; form.classList.add('is-busy');
     try {
       const r = await fetch('https://portfolio-leads.thoufeer-noushad.workers.dev/lead', {
@@ -778,137 +795,275 @@
         msg.textContent = '';
         try { frame.src = d.url; form.hidden = true; view.hidden = false; dlg.classList.add('is-view'); }
         catch (_) { window.open(d.url, '_blank', 'noopener'); }
-      } else err(d.error || 'That did not work. Please try again, or email thoufeer.work@gmail.com.');
+      } else if (d.error && isEmailErr(d.error)) errEmail(d.error);
+      else err(d.error || 'That did not work. Please try again, or email thoufeer.work@gmail.com.');
     } catch (_) { err('No connection right now. Please try again, or email thoufeer.work@gmail.com.'); }
     form.classList.remove('is-busy');
   });
 })();
-
-/* ===== 2026-11-23 hero: a building that assembles itself, discipline by discipline (WIP > Shared > Published) ===== */
+/* ===== 2026-11-23 round 5 hero: a building that assembles like a digital twin =====
+   site and infrastructure > structure > interior > MEP > facade > twin layer, with a section cut sweeping through once.
+   Starts only after the name has appeared ('hero:intro'). Reduced motion / no WebGL: the poster stays. */
 (() => {
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
-  const fig = $('.hero__cut'); if (!fig || !window.THREE) return;
+  const fig = $('.hero__cut'), box = fig && $('.h3d', fig), poster = box && $('.h3d__poster', box);
+  if (!box || !window.THREE) return;
+  const POSTER = /[?&]poster\b/.test(location.search);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches && !POSTER;
+  if (reduce) return;
   try { const c = document.createElement('canvas'); if (!(c.getContext('webgl') || c.getContext('experimental-webgl'))) return; } catch (_) { return; }
-  const T = THREE, reduce = matchMedia('(prefers-reduced-motion: reduce)').matches, phone = innerWidth <= 820;
-  const box = document.createElement('div'); box.className = 'h3d';
-  box.innerHTML = `<canvas aria-label="Animated model: structure, architecture and MEP assembling" role="img"></canvas>
-    <p class="h3d__chip" aria-live="off"><span>ISO 19650</span><b>WIP</b></p>
-    <div class="h3d__tags" aria-hidden="true"></div>
-    <div class="h3d__tg" role="group" aria-label="Show disciplines"><button type="button" aria-pressed="true" data-l="s">Structure</button><button type="button" aria-pressed="true" data-l="a">Architecture</button><button type="button" aria-pressed="true" data-l="m">MEP</button></div>`;
-  fig.classList.add('is-3d'); fig.removeAttribute('aria-hidden'); fig.prepend(box);
-  const cap = $('figcaption', fig); if (cap) cap.textContent = phone ? 'Model · structure, architecture, MEP' : 'Model · structure, architecture, MEP · drag to turn';
-  const cv = $('canvas', box), chip = $('.h3d__chip b', box), tagLayer = $('.h3d__tags', box);
-  const R = new T.WebGLRenderer({ canvas: cv, antialias: true, alpha: true }); R.setPixelRatio(Math.min(2, devicePixelRatio || 1));
-  const scene = new T.Scene();
-  const cam = new T.OrthographicCamera(-1, 1, 1, -1, -50, 50);
-  scene.add(new T.AmbientLight(0xffffff, .78)); const sun = new T.DirectionalLight(0xffffff, .5); sun.position.set(4, 8, 5); scene.add(sun);
-  const root = new T.Group(); scene.add(root);
-  const L = { s: new T.Group(), a: new T.Group(), m: new T.Group() }; Object.values(L).forEach(g => root.add(g));
-  const INK = 0x16181D, items = [];
-  const mat = (c, o) => new T.MeshLambertMaterial({ color: c, transparent: o < 1, opacity: o });
-  const M = { conc: mat(0xB9B2A6, .95), slab: mat(0xCFC8BC, .92), pad: mat(0xA59E92, 1), glass: mat(0xFAF8F2, .26), roof: mat(0xE8E3D7, .9), pipe: new T.MeshBasicMaterial({ color: 0x1D3BC9 }), duct: mat(0x9C4A32, .9) };
-  const edge = (mesh, o = .75) => { const e = new T.LineSegments(new T.EdgesGeometry(mesh.geometry), new T.LineBasicMaterial({ color: INK, transparent: true, opacity: o })); mesh.add(e); return mesh; };
-  // item: mesh, layer, start time, kind of entrance
-  const add = (geo, m, x, y, z, layer, t, kind, o) => {
-    const mesh = edge(new T.Mesh(geo, m), o); mesh.position.set(x, y, z); L[layer].add(mesh);
-    items.push({ mesh, t, kind, y, x, z }); return mesh;
+  const T = THREE, phone = innerWidth <= 820 && !POSTER;
+  const LAYERS = [['g', 'Site'], ['s', 'Structure'], ['i', 'Interior'], ['m', 'MEP'], ['a', 'Facade'], ['t', 'Twin']];
+  const cv = document.createElement('canvas'); cv.className = 'h3d__cv';
+  cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', 'Animated model of a building assembling: site and utilities, structure, interior, MEP, facade and a digital-twin layer');
+  box.append(cv);
+  box.insertAdjacentHTML('beforeend', '<p class="h3d__chip"><span>ISO 19650</span><b>WIP</b></p><div class="h3d__tags" aria-hidden="true"></div>');
+  const cap = $('figcaption', fig);
+  if (cap) { cap.className = 'h3d__cap'; cap.innerHTML = '<span class="h3d__tg" role="group" aria-label="Show layers of the model">' + LAYERS.map(([k, n]) => `<button type="button" aria-pressed="true" data-l="${k}">${n}</button>`).join('') + '</span>'; }
+  const chip = $('.h3d__chip b', box), tagLayer = $('.h3d__tags', box);
+
+  const R = new T.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, preserveDrawingBuffer: POSTER });
+  R.setPixelRatio(Math.min(2, devicePixelRatio || 1)); R.localClippingEnabled = true;
+  const scene = new T.Scene(), cam = new T.OrthographicCamera(-1, 1, 1, -1, -60, 60);
+  scene.add(new T.AmbientLight(0xffffff, .8)); const sun = new T.DirectionalLight(0xffffff, .45); sun.position.set(4, 9, 6); scene.add(sun);
+  const pivot = new T.Group(), root = new T.Group(); scene.add(pivot); pivot.add(root);
+  const L = {}; LAYERS.forEach(([k]) => { L[k] = new T.Group(); root.add(L[k]); });
+
+  /* section cut: keeps x <= c (root space); one sweep while it assembles, then it rests */
+  const cutLocal = new T.Plane(new T.Vector3(-1, 0, 0), 99), cut = cutLocal.clone(), CL = [cut];
+  const INK = 0x16181D, COB = 0x1D3BC9;
+  const mat = (c, o = 1, clip = true) => new T.MeshLambertMaterial({ color: c, transparent: o < 1, opacity: o, side: T.DoubleSide, clippingPlanes: clip ? CL : null, depthWrite: o > .5 });
+  const basic = (c, o = 1, clip = true) => new T.MeshBasicMaterial({ color: c, transparent: o < 1, opacity: o, clippingPlanes: clip ? CL : null });
+  const lineCache = {};
+  const lineM = (o, clip = true, c = INK) => lineCache[o + '|' + clip + '|' + c] || (lineCache[o + '|' + clip + '|' + c] = new T.LineBasicMaterial({ color: c, transparent: true, opacity: o, clippingPlanes: clip ? CL : null }));
+  const M = {
+    pad: mat(0xA59E92), roofS: mat(0xD8D2C6, .5), conc: mat(0xB9B2A6, .97), slab: mat(0xD3CCC0, .95), core: mat(0xC4BDB1, .42),
+    glass: mat(0xDDE3EE, .26), glassD: mat(0xB8C2D6, .4), fin: mat(0xABA599), canopy: mat(0x6F6B64), parapet: mat(0xE4DFD3),
+    part: mat(0xF1EDE4, .9), furn: mat(0xC9C0B0), table: mat(0xA8977E), lift: mat(0x6F6B64),
+    pipe: basic(COB), duct: mat(0xA5533A, .92), tray: mat(0x8A8D94), plant: mat(0xDAD4C8),
+    ground: mat(0xF3EFE6, 1, false), road: mat(0xBDB9B0, 1, false), kerb: mat(0xB7B1A5, 1, false), pit: mat(0xD8C9AC, .22, false),
+    sewer: basic(0xA5533A, 1, false), main: basic(COB, 1, false), pier: mat(0xC8C1B5, 1, false), deck: mat(0xD9D3C7, 1, false),
+    sensor: basic(COB, 1, false), halo: basic(COB, .35, false),
   };
-  const BX = 3, BZ = 2, bay = 1.6, H = 1.05, ST = phone ? 2 : 3, W = BX * bay, Dp = BZ * bay;
+  const items = [];
+  const boxB = (w, h, d) => new T.BoxGeometry(w, h, d).translate(0, h / 2, 0);      // base at y = 0
+  const boxL = (w, h, d) => new T.BoxGeometry(w, h, d).translate(w / 2, 0, 0);      // starts at x = 0
+  const add = (geo, m, x, y, z, layer, t, kind, eo = .7) => {
+    const mesh = new T.Mesh(geo, m); mesh.position.set(x, y, z);
+    if (eo) mesh.add(new T.LineSegments(new T.EdgesGeometry(geo), lineM(eo, !!m.clippingPlanes)));
+    L[layer].add(mesh); items.push({ mesh, t, kind, x, y, z }); return mesh;
+  };
+  const lines = (pts, m, layer, t, dur = 1) => {      // pts: flat list of segment pairs; drawn in over dur
+    const g = new T.BufferGeometry().setAttribute('position', new T.Float32BufferAttribute(pts, 3));
+    const ln = new T.LineSegments(g, m); if (m.isLineDashedMaterial) ln.computeLineDistances();
+    L[layer].add(ln); g.setDrawRange(0, 0); items.push({ mesh: ln, t, kind: 'drawL', total: pts.length / 3, dur }); return ln;
+  };
+  const tube = (pts, r, m, layer, t, dur = 1.1) => {
+    const curve = new T.CatmullRomCurve3(pts.map(p => new T.Vector3(...p)), false, 'catmullrom', .02);
+    const g = new T.TubeGeometry(curve, 90, r, 8, false), mesh = new T.Mesh(g, m); L[layer].add(mesh);
+    g.setDrawRange(0, 0); items.push({ mesh, t, kind: 'draw', total: g.index.count, dur }); return mesh;
+  };
+
+  /* ---- dimensions ---- */
+  const BX = 3, BZ = 2, bay = 1.6, H = 1.05, ST = 3, W = BX * bay, D = BZ * bay;
+  const fl = s => .14 + s * H, ft = s => fl(s) + .05, yC = s => fl(s + 1) - .16, roof = ft(ST);
+  const X0 = -2.0, X1 = W + 1.3, Z0 = -1.0, ZK = D + 1.0;
+
+  /* ---- site and infrastructure ---- */
+  const gnd = (x0, x1, z0, z1) => add(new T.BoxGeometry(x1 - x0, .1, z1 - z0), M.ground, (x0 + x1) / 2, -.05, (z0 + z1) / 2, 'g', .1, 'fade', .35);
+  const hx0 = 1.0, hx1 = 3.3, hz0 = D + .3;
+  gnd(X0, X1, Z0, hz0); gnd(X0, hx0, hz0, ZK); gnd(hx1, X1, hz0, ZK);
+  add(new T.BoxGeometry(hx1 - hx0, .75, ZK - hz0), M.pit, (hx0 + hx1) / 2, -.375, (hz0 + ZK) / 2, 'g', .3, 'fade', .5);
+  add(new T.BoxGeometry(X1 - X0, .09, .12), M.kerb, (X0 + X1) / 2, .045, ZK + .06, 'g', .2, 'fade', .5);
+  add(new T.BoxGeometry(X1 - X0, .04, 1.3), M.road, (X0 + X1) / 2, -.02, ZK + .8, 'g', .2, 'fade', .3);
+  lines([X0, .002, ZK + .8, X1, .002, ZK + .8], new T.LineDashedMaterial({ color: INK, dashSize: .22, gapSize: .16, transparent: true, opacity: .55 }), 'g', .3, .8);
+  tube([[X0 + 1.2, -.3, D + .55], [X1 - 1.0, -.3, D + .55]], .06, M.main, 'g', .6, 1.2);
+  tube([[X0 + 1.2, -.56, D + .82], [X1 - 1.0, -.56, D + .82]], .085, M.sewer, 'g', .75, 1.2);
+  tube([[2.6, -.3, D + .55], [2.6, -.3, D + .35], [2.6, .3, D + .1]], .04, M.main, 'g', 1.6, .5);
+  const mh = new T.CylinderGeometry(.2, .2, .74, 18, 1, true).translate(0, -.37, 0);
+  add(mh, mat(0xBDB4A3, .55, false), 1.55, 0, D + .62, 'g', .5, 'fade', .3);
+  add(new T.CylinderGeometry(.24, .24, .03, 18), M.canopy, 1.55, .015, D + .62, 'g', .5, 'fade', .5);
+  // setting-out grid, dashed, drawn first
+  const grid = [];
+  for (let i = 0; i <= BX; i++) grid.push(i * bay, .004, Z0 + .1, i * bay, .004, hz0 - .02);
+  for (let j = 0; j <= BZ; j++) grid.push(X0 + .3, .004, j * bay, X1 - .1, .004, j * bay);
+  lines(grid, new T.LineDashedMaterial({ color: COB, dashSize: .1, gapSize: .07, transparent: true, opacity: .6 }), 'g', 0, .9);
+  // a short metro viaduct at the edge of the site (a nod to Delhi Metro)
+  const px = -1.25;
+  [[.2], [ZK + .8]].forEach(([z], k) => {
+    add(boxB(.3, 2.05, .3), M.pier, px, 0, z, 'g', .5 + k * .1, 'rise', .6);
+    add(new T.BoxGeometry(.9, .18, .34), M.pier, px, 2.14, z, 'g', .8 + k * .1, 'drop', .6);
+  });
+  add(new T.BoxGeometry(.82, .2, ZK + 1.9 - Z0), M.deck, px, 2.33, (Z0 + ZK + 1.9) / 2 - .1, 'g', 1.0, 'slideZ', .6);
+  lines([px - .2, 2.44, Z0 + .05, px - .2, 2.44, ZK + 1.6, px + .2, 2.44, Z0 + .05, px + .2, 2.44, ZK + 1.6], lineM(.6, false), 'g', 1.2, .8);
+
+  /* ---- structure ---- */
   let t = .9;
-  // structure: pads, columns, slabs, core
   for (let i = 0; i <= BX; i++) for (let j = 0; j <= BZ; j++) add(new T.BoxGeometry(.42, .14, .42), M.pad, i * bay, .07, j * bay, 's', t + (i + j) * .025, 'drop');
+  add(new T.BoxGeometry(W + .3, .1, D + .3), M.slab, W / 2, fl(0), D / 2, 's', t + .15, 'drop');
   t += .35;
   for (let s = 0; s < ST; s++) {
-    for (let i = 0; i <= BX; i++) for (let j = 0; j <= BZ; j++) add(new T.BoxGeometry(.14, H, .14), M.conc, i * bay, s * H + H / 2 + .14, j * bay, 's', t + (i * 3 + j) * .015, 'rise');
-    t += .22;
-    add(new T.BoxGeometry(W + .3, .1, Dp + .3), M.slab, W / 2, (s + 1) * H + .14, Dp / 2, 's', t, 'drop'); t += .2;
+    for (let i = 0; i <= BX; i++) for (let j = 0; j <= BZ; j++) add(boxB(.14, H, .14), M.conc, i * bay, fl(s), j * bay, 's', t + (i * 3 + j) * .014, 'rise');
+    t += .2; add(new T.BoxGeometry(W + .3, .1, D + .3), s === ST - 1 ? M.roofS : M.slab, W / 2, fl(s + 1), D / 2, 's', t, 'drop'); t += .18;
   }
-  add(new T.BoxGeometry(.9, ST * H + .5, .9), M.conc, .55, (ST * H + .5) / 2 + .14, Dp - .55, 's', 1.4, 'rise', .9);
-  // architecture: facade panels on the two visible faces, roof upstand
-  t = 2.6;
+  add(boxB(.9, ST * H + .5, .9), M.core, .55, fl(0), D - .55, 's', 1.35, 'rise', .8);
+
+  /* ---- interior: partitions, a meeting room, desks, stair and lift ---- */
+  const parts = [], perFloorDesks = phone ? 3 : 6;
   for (let s = 0; s < ST; s++) {
-    for (let i = 0; i < BX; i++) add(new T.BoxGeometry(bay - .12, H - .22, .05), M.glass, i * bay + bay / 2, s * H + H / 2 + .2, Dp + .12, 'a', t + (s * BX + i) * .05, 'slideZ', .5);
-    for (let j = 0; j < BZ; j++) add(new T.BoxGeometry(.05, H - .22, bay - .12), M.glass, W + .12, s * H + H / 2 + .2, j * bay + bay / 2, 'a', t + .1 + (s * BZ + j) * .05, 'slideX', .5);
+    const y = ft(s), ti = 2.1 + s * .16, ph = .8;
+    add(boxL(W - 1.25, ph, .035), M.part, 1.1, y + ph / 2, 1.45, 'i', ti, 'growX', .4);
+    add(boxB(.035, ph, D - 1.6), M.part, W - 1.7, y, 1.45 + (D - 1.6) / 2, 'i', ti + .05, 'rise', .4);
+    add(boxB(.035, ph, 1.35), M.part, 2.65, y, .1 + 1.35 / 2, 'i', ti + .08, 'rise', .4);
+    add(boxB(.9, .27, .42), M.table, W - .85, y, D - .78, 'i', ti + .25, 'pop', .5);
+    const desks = new T.InstancedMesh(boxB(.48, .3, .27), M.furn, perFloorDesks), m4 = new T.Matrix4();
+    for (let k = 0; k < perFloorDesks; k++) { m4.makeTranslation(1.45 + (k % 3) * .68, 0, 1.85 + Math.floor(k / 3) * .62); desks.setMatrixAt(k, m4); }
+    desks.position.set(0, y, 0); L.i.add(desks); items.push({ mesh: desks, t: ti + .3, kind: 'pop' });
+    add(boxB(.28, .42, .28), M.lift, .33, y, D - .33, 'i', ti + .1, 'pop', .5);
+    // stair flight inside the core, light ink
+    const st = []; const n = 7, x0 = .72, z0 = D - .98, dz = .84 / n, dy = H / n;
+    for (let k = 0; k < n; k++) { const yy = fl(s) + k * dy, zz = z0 + k * dz; st.push(x0, yy, zz, x0, yy + dy, zz, x0, yy + dy, zz, x0, yy + dy, zz + dz); }
+    lines(st, lineM(.55), 'i', ti + .1, .6);
   }
-  [[W + .3, .05, W / 2, -.12], [W + .3, .05, W / 2, Dp + .12]].forEach(([l, d, x, z], k) => add(new T.BoxGeometry(l, .3, d), M.roof, x, ST * H + .34, z, 'a', t + .9 + k * .05, 'drop', .6));
-  [[-.12], [W + .12]].forEach(([x], k) => add(new T.BoxGeometry(.05, .3, Dp + .3), M.roof, x, ST * H + .34, Dp / 2, 'a', t + 1 + k * .05, 'drop', .6));
-  // site outline + setting-out grid, drawn first
-  const site = []; [[-.9, -.9], [W + .9, -.9], [W + .9, Dp + .9], [-.9, Dp + .9], [-.9, -.9]].forEach(([x, z]) => site.push(new T.Vector3(x, 0, z)));
-  const sg = new T.BufferGeometry().setFromPoints(site); const sl = new T.Line(sg, new T.LineBasicMaterial({ color: 0x1D3BC9 })); L.s.add(sl); sg.setDrawRange(0, 0); items.push({ mesh: sl, t: .1, kind: 'line', total: 5 });
-  for (let i = 0; i <= BX; i++) { const g = new T.BufferGeometry().setFromPoints([new T.Vector3(i * bay, 0, -1.3), new T.Vector3(i * bay, 0, Dp + 1.3)]); const l = new T.Line(g, new T.LineDashedMaterial({ color: 0x1D3BC9, dashSize: .12, gapSize: .1, transparent: true, opacity: .45 })); l.computeLineDistances(); L.s.add(l); items.push({ mesh: l, t: .3 + i * .08, kind: 'fade' }); }
-  for (let j = 0; j <= BZ; j++) { const g = new T.BufferGeometry().setFromPoints([new T.Vector3(-1.3, 0, j * bay), new T.Vector3(W + 1.3, 0, j * bay)]); const l = new T.Line(g, new T.LineDashedMaterial({ color: 0x1D3BC9, dashSize: .12, gapSize: .1, transparent: true, opacity: .45 })); l.computeLineDistances(); L.s.add(l); items.push({ mesh: l, t: .4 + j * .08, kind: 'fade' }); }
-  // MEP: pipes and a duct, drawn along their routes
-  const tube = (pts, r, m, t0) => {
-    const curve = new T.CatmullRomCurve3(pts.map(p => new T.Vector3(...p)), false, 'catmullrom', .02);
-    const geo = new T.TubeGeometry(curve, 80, r, 8, false); const mesh = new T.Mesh(geo, m); L.m.add(mesh);
-    geo.setDrawRange(0, 0); items.push({ mesh, t: t0, kind: 'draw', total: geo.index.count }); return mesh;
-  };
-  const yC = s => (s + 1) * H - .12;
-  const zf = Dp - .22, xf = W - .22;
-  tube([[xf, .25, zf], [xf, yC(ST - 1), zf], [.4, yC(ST - 1), zf]], .09, M.pipe, 4.0);
-  tube([[.4, yC(0), zf], [xf, yC(0), zf], [xf, yC(0), .35]], .08, M.pipe, 4.25);
-  if (ST > 2) tube([[.4, yC(1), zf - .05], [xf - .2, yC(1), zf - .05]], .05, M.pipe, 4.5);
-  add(new T.BoxGeometry(.3, .18, Dp - .8), M.duct, xf - .05, yC(ST - 1) - .3, Dp / 2 - .1, 'm', 4.6, 'growZ', .7);
-  // data tags
+
+  /* ---- MEP: riser, ducts, pipes, cable trays, rooftop plant ---- */
+  add(boxB(.28, ST * H + .45, .28), M.duct, 1.32, fl(0), D - .32, 'm', 2.55, 'rise', .6);
+  for (let s = 0; s < ST; s++) {
+    add(boxL(W - 1.85, .14, .26), M.duct, 1.46, yC(s), D * .62, 'm', 2.75 + s * .12, 'growX', .55);
+    add(boxL(W - 1.85, .025, .22), M.tray, 1.46, yC(s) + .02, .82, 'm', 2.95 + s * .12, 'growX', .45);
+    if (s < ST - 1) tube([[1.72, yC(s) - .06, D - .5], [W - .32, yC(s) - .06, D - .5], [W - .32, yC(s) - .06, .5]], .042, M.pipe, 'm', 3.05 + s * .14, .9);
+  }
+  tube([[1.72, fl(0) + .1, D - .3], [1.72, yC(ST - 1) + .02, D - .3], [W - .35, yC(ST - 1) + .02, D - .3], [W - .35, yC(ST - 1) + .02, .35]], .07, M.pipe, 'm', 2.9, 1.3);
+  add(boxB(1.15, .46, .78), M.plant, W - 1.35, roof, .95, 'm', 3.9, 'drop', .7);
+  [-.26, .26].forEach((dx, k) => add(new T.CylinderGeometry(.16, .16, .05, 20), M.canopy, W - 1.35 + dx, roof + .49, .95, 'm', 4.05 + k * .08, 'pop', .6));
+  add(boxB(.24, .5, .24), M.duct, W - 1.35, roof - .02, 1.5, 'm', 4.0, 'rise', .5);
+
+  /* ---- facade: curtain wall (front), fins (side), entrance canopy, parapet ---- */
+  t = 3.25;
+  for (let s = 0; s < ST; s++) {
+    for (let i = 0; i < BX; i++) add(new T.BoxGeometry(bay - .04, H - .06, .03), s === 0 && i === 1 ? M.glassD : M.glass, i * bay + bay / 2, fl(s) + H / 2 + .02, D + .13, 'a', t + (s * BX + i) * .04, 'slideZ', 0);
+    for (let j = 0; j < BZ; j++) add(new T.BoxGeometry(.03, H - .06, bay - .04), M.glass, W + .13, fl(s) + H / 2 + .02, j * bay + bay / 2, 'a', t + .1 + (s * BZ + j) * .04, 'slideX', 0);
+  }
+  const mul = [], zf = D + .15;
+  for (let k = 0; k <= BX * 3; k++) { const x = k * bay / 3; mul.push(x, fl(0), zf, x, fl(ST) + .05, zf); }
+  for (let s = 0; s <= ST; s++) { mul.push(0, fl(s) + .02, zf, W, fl(s) + .02, zf); if (s < ST) mul.push(0, fl(s) + .3, zf, W, fl(s) + .3, zf); }
+  lines(mul, lineM(.6), 'a', t + .2, 1.1);
+  const nf = phone ? 7 : 11, fins = new T.InstancedMesh(boxB(.24, ST * H, .03), M.fin, nf), m4 = new T.Matrix4();
+  for (let k = 0; k < nf; k++) { m4.makeTranslation(W + .27, 0, .12 + k * (D - .24) / (nf - 1)); fins.setMatrixAt(k, m4); }
+  fins.position.y = fl(0); L.a.add(fins); items.push({ mesh: fins, t: t + .5, kind: 'rise' });
+  add(new T.BoxGeometry(bay + .5, .07, .62), M.canopy, bay * 1.5, fl(1) - .1, D + .46, 'a', t + .7, 'drop', .7);
+  [[W / 2, D + .15, W + .3, .05], [W / 2, -.15, W + .3, .05]].forEach(([x, z, w, d]) => add(boxB(w, .22, d), M.parapet, x, roof, z, 'a', t + .9, 'drop', .6));
+  [[W + .15, D / 2], [-.15, D / 2]].forEach(([x, z]) => add(boxB(.05, .22, D + .3), M.parapet, x, roof, z, 'a', t + .95, 'drop', .6));
+
+  /* ---- twin: sensors, data lines to one panel ---- */
+  const HUB = new T.Vector3(W * .5 + .9, roof + 1.55, D * .45);
+  const SENS = [[W, fl(1) + H * .62, D], [W * .62, yC(0) + .07, D * .62 + .13], [W - 1.35, roof + .56, .95], [1.55, .06, D + .62], [W - .85, ft(1) + .32, D - .78], [px, 2.46, ZK + .3]].slice(0, phone ? 5 : 6);
+  const sensors = [];
+  SENS.forEach((p, k) => {
+    const v = new T.Vector3(...p), dot = new T.Mesh(new T.SphereGeometry(.075, 14, 10), M.sensor), halo = new T.Mesh(new T.SphereGeometry(.075, 14, 10), M.halo.clone());
+    dot.position.copy(v); halo.position.copy(v); L.t.add(dot); L.t.add(halo); dot.visible = halo.visible = false;
+    const pts = [v.x, v.y, v.z, v.x, HUB.y - .25, v.z, v.x, HUB.y - .25, v.z, HUB.x, HUB.y, HUB.z];
+    const ln = lines(pts, new T.LineDashedMaterial({ color: COB, dashSize: .07, gapSize: .06, transparent: true, opacity: .6 }), 't', 4.85 + k * .1, .7);
+    const pk = new T.Mesh(new T.SphereGeometry(.035, 8, 6), M.sensor); pk.visible = false; L.t.add(pk);
+    sensors.push({ dot, halo, pk, t: 4.7 + k * .1, a: v, b: new T.Vector3(v.x, HUB.y - .25, v.z), ph: k * .9 });
+  });
+
+  /* ---- labels ---- */
   const TAGS = [
-    { at: new T.Vector3(W, ST * H * .55, Dp), text: 'IfcColumn · S2 · Shared', t: 5.0 },
-    { at: new T.Vector3(W * .55, yC(ST - 1), Dp - .22), text: 'Pipe DN150 · A1 · Published', t: 5.4 },
+    { at: new T.Vector3(W, fl(1) + H * .45, D), text: 'IfcColumn · S2 · Shared', t: 3.0, layer: 's', cls: '' },
+    { at: HUB, html: '<i></i>Twin · 3 systems live · <b>Published</b>', t: 5.5, layer: 't', cls: ' h3d__tag--twin' },
   ];
-  TAGS.forEach(g => { g.el = document.createElement('p'); g.el.className = 'h3d__tag'; g.el.innerHTML = `<i></i><span>${g.text}</span>`; tagLayer.append(g.el); });
-  root.position.set(-W / 2, -(ST * H) / 2 - .2, -Dp / 2);
-  // camera: axonometric, drawing style
-  const VIEW = phone ? 3.7 : 3.55;
-  const size = () => { const w = box.clientWidth, h = box.clientHeight; R.setSize(w, h, false); const a = w / h; cam.left = -VIEW * a; cam.right = VIEW * a; cam.top = VIEW; cam.bottom = -VIEW; cam.updateProjectionMatrix(); };
-  const pivot = new T.Group(); scene.add(pivot); pivot.add(root);
-  cam.position.set(8, 6.4, 8); cam.lookAt(0, 0, 0);
-  // layer toggles
-  $('.h3d__tg', box).addEventListener('click', e => { const b = e.target.closest('[data-l]'); if (!b) return; const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', on); L[b.dataset.l].visible = on; });
-  // tilt + limited orbit (no drag on phones, it fights scrolling)
+  TAGS.forEach(g => { g.el = document.createElement('p'); g.el.className = 'h3d__tag' + g.cls; g.el.innerHTML = g.html || `<i></i><span>${g.text}</span>`; tagLayer.append(g.el); });
+
+  /* ---- section-cut frame ---- */
+  const secG = new T.BufferGeometry().setAttribute('position', new T.Float32BufferAttribute([0, -.8, Z0, 0, roof + .8, Z0, 0, roof + .8, ZK, 0, -.8, ZK, 0, -.8, Z0], 3));
+  const sec = new T.Line(secG, new T.LineBasicMaterial({ color: COB, transparent: true, opacity: .8 })); root.add(sec); sec.visible = false;
+
+  /* ---- camera: axonometric, fitted to the whole model ---- */
+  root.position.set(-W / 2 + .25, -roof / 2, -D / 2 - .3);
+  cam.position.set(8, 6.4, 8); cam.lookAt(0, 0, 0); cam.updateMatrixWorld();
+  const ext = { x0: 1e9, x1: -1e9, y0: 1e9, y1: -1e9 }, v3 = new T.Vector3();
+  scene.updateMatrixWorld(true);
+  const grow = v => { v.applyMatrix4(cam.matrixWorldInverse); ext.x0 = Math.min(ext.x0, v.x); ext.x1 = Math.max(ext.x1, v.x); ext.y0 = Math.min(ext.y0, v.y); ext.y1 = Math.max(ext.y1, v.y); };
+  root.traverse(o => { if (!o.geometry || o === sec) return; const pa = o.geometry.attributes.position, mw = o.matrixWorld;
+    if (o.isInstancedMesh) { const mi = new T.Matrix4(); for (let n = 0; n < o.count; n++) { o.getMatrixAt(n, mi); const m2 = mw.clone().multiply(mi); for (let i = 0; i < pa.count; i += 1) grow(v3.fromBufferAttribute(pa, i).applyMatrix4(m2)); } return; }
+    for (let i = 0; i < pa.count; i += (pa.count > 400 ? 7 : 1)) grow(v3.fromBufferAttribute(pa, i).applyMatrix4(mw)); });
+  grow(root.localToWorld(HUB.clone().add(new T.Vector3(0, .45, 0))));
+  const cx = (ext.x0 + ext.x1) / 2, cy = (ext.y0 + ext.y1) / 2, hw = (ext.x1 - ext.x0) / 2 * 1.03, hh = (ext.y1 - ext.y0) / 2 * 1.04;
+  const size = () => { const w = box.clientWidth, h = box.clientHeight; if (!w || !h) return; R.setSize(w, h, false); const a = w / h, V = Math.max(hh, hw / a); cam.left = cx - V * a; cam.right = cx + V * a; cam.top = cy + V; cam.bottom = cy - V; cam.updateProjectionMatrix(); };
+
+  /* ---- toggles ---- */
+  cap && cap.addEventListener('click', e => { const b = e.target.closest('[data-l]'); if (!b) return; const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', on); L[b.dataset.l].visible = on; });
+
+  /* ---- tilt and a limited turn (no drag on phones: it fights scrolling) ---- */
   let yaw = 0, pitch = 0, ty = 0, tp = 0, drag = false, lx = 0, ly = 0;
-  if (!phone) {
-    addEventListener('pointermove', e => { if (drag) return; const r = box.getBoundingClientRect(); ty = ((e.clientX - r.left) / r.width - .5) * .35; tp = ((e.clientY - r.top) / r.height - .5) * .12; }, { passive: true });
+  if (!phone && !POSTER) {
+    addEventListener('pointermove', e => { if (drag) return; const r = box.getBoundingClientRect(); if (r.bottom < 0) return; ty = ((e.clientX - r.left) / r.width - .5) * .32; tp = ((e.clientY - r.top) / r.height - .5) * .1; }, { passive: true });
     cv.addEventListener('pointerdown', e => { drag = true; lx = e.clientX; ly = e.clientY; cv.setPointerCapture(e.pointerId); });
     cv.addEventListener('pointermove', e => { if (!drag) return; ty = Math.max(-.44, Math.min(.44, ty + (e.clientX - lx) * .006)); tp = Math.max(-.2, Math.min(.2, tp + (e.clientY - ly) * .003)); lx = e.clientX; ly = e.clientY; });
     addEventListener('pointerup', () => { drag = false; });
   }
-  const ease = k => 1 - Math.pow(1 - k, 3), back = k => { const c = 1.6; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); };
-  const hero = $('#hero'); let t0 = performance.now(), run = false, explode = 0;
-  const STATUS = [[0, 'WIP'], [3.0, 'Shared'], [5.4, 'Published']];
+
+  /* ---- motion ---- */
+  const ease = k => 1 - Math.pow(1 - k, 3), inOut = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+  const back = k => { const c = 1.5; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); };
+  const clamp = k => Math.max(0, Math.min(1, k));
+  const STATUS = [[0, 'WIP'], [3.0, 'Shared'], [5.4, 'Published']], CUT0 = .7, CUT1 = 4.9, END = 7;
+  const hero = $('#hero'); let t0 = 0, run = false, started = false, settled = false;
   const tmp = new T.Vector3();
-  const frame = now => {
-    if (!run) return; requestAnimationFrame(frame);
-    const el = reduce ? 99 : (now - t0) / 1000;
+  const step = el => {
     items.forEach(it => {
-      const k = Math.max(0, Math.min(1, (el - it.t) / .55)); const m = it.mesh;
-      if (it.kind === 'line') { m.geometry.setDrawRange(0, Math.ceil(it.total * Math.max(0, Math.min(1, (el - it.t) / .8)))); return; }
-      if (it.kind === 'fade') { m.visible = el > it.t; return; }
-      if (it.kind === 'draw') { m.geometry.setDrawRange(0, Math.floor(it.total * ease(Math.max(0, Math.min(1, (el - it.t) / 1.1))))); return; }
-      m.visible = k > 0;
-      if (it.kind === 'rise') { m.scale.y = Math.max(.001, ease(k)); m.position.y = (it.y - (m.geometry.parameters.height / 2)) + m.geometry.parameters.height / 2 * m.scale.y; }
-      else if (it.kind === 'drop') m.position.y = it.y + (1 - back(k)) * 1.2;
+      const m = it.mesh;
+      if (it.kind === 'draw' || it.kind === 'drawL') { const n = Math.floor(it.total * ease(clamp((el - it.t) / it.dur))); m.geometry.setDrawRange(0, it.kind === 'drawL' ? n - n % 2 : n); return; }
+      const k = clamp((el - it.t) / .55); m.visible = k > 0;
+      if (it.kind === 'rise') m.scale.y = Math.max(.001, ease(k));
+      else if (it.kind === 'drop') m.position.y = it.y + (1 - back(k)) * 1.1;
       else if (it.kind === 'slideZ') m.position.z = it.z + (1 - ease(k)) * .9;
       else if (it.kind === 'slideX') m.position.x = it.x + (1 - ease(k)) * .9;
       else if (it.kind === 'growX') m.scale.x = Math.max(.001, ease(k));
-      else if (it.kind === 'growZ') m.scale.z = Math.max(.001, ease(k));
+      else if (it.kind === 'pop') m.scale.setScalar(Math.max(.001, back(k)));
+      else if (it.kind === 'fade') m.scale.setScalar(1);
     });
-    chip.textContent = STATUS.filter(s => el >= s[0]).pop()[1];
-    chip.parentElement.dataset.s = chip.textContent;
-    // scroll: exploded axonometric, then fade
-    const r = hero.getBoundingClientRect(); explode = Math.max(0, Math.min(1, -r.top / (r.height * .8)));
-    L.a.position.y = explode * 1.4; L.m.position.y = explode * 2.8;
-    const sway = reduce ? 0 : Math.sin(now / 4000) * .1;
-    yaw += (ty + sway - yaw) * .08; pitch += (tp - pitch) * .08; pivot.rotation.set(pitch, yaw, 0);
-    box.style.opacity = 1 - explode * .55;
-    // tags follow their points
+    const kc = clamp((el - CUT0) / (CUT1 - CUT0));
+    cutLocal.constant = kc >= 1 ? 99 : X0 - .2 + inOut(kc) * (X1 + .4 - X0);
+    sec.visible = kc > 0 && kc < 1; sec.position.x = cutLocal.constant;
+    sec.material.opacity = .8 * Math.min(1, (1 - kc) * 6);
+    const s = STATUS.filter(x => el >= x[0]).pop()[1];
+    if (chip.textContent !== s) { chip.textContent = s; chip.parentElement.dataset.s = s; }
+  };
+  const frame = now => {
+    if (!run) return; requestAnimationFrame(frame);
+    const el = POSTER ? 99 : (now - t0) / 1000;
+    if (!settled) { step(el); if (el > END) { settled = true; box.classList.add('is-done'); } }
+    // scroll: an exploded axonometric, then fade
+    const r = hero.getBoundingClientRect(), ex = clamp(-r.top / (r.height * .8));
+    L.a.position.y = ex * 1.3; L.m.position.y = ex * 2.5; L.t.position.y = ex * 2.5; L.i.position.y = ex * .5;
+    box.style.opacity = 1 - ex * .55;
+    yaw += (ty - yaw) * .08; pitch += (tp - pitch) * .08; pivot.rotation.set(pitch, yaw, 0);
+    root.updateMatrixWorld(true); cut.copy(cutLocal).applyMatrix4(root.matrixWorld);
+    // twin: pulsing sensors, a data packet rising on each line
+    sensors.forEach(sn => {
+      const on = el > sn.t; sn.dot.visible = sn.halo.visible = sn.pk.visible = on; if (!on) return;
+      const k = POSTER ? 0 : ((now / 1000 + sn.ph) % 2.4) / 2.4;
+      sn.halo.scale.setScalar(1 + k * 2.6); sn.halo.material.opacity = .4 * (1 - k);
+      sn.pk.visible = !POSTER && el > sn.t + .9; sn.pk.position.lerpVectors(sn.a, sn.b, (k * 1.4) % 1);
+    });
+    // labels follow their points
     const w = box.clientWidth, h = box.clientHeight;
     TAGS.forEach(g => {
-      tmp.copy(g.at); root.localToWorld(tmp); if (g.at === TAGS[1].at) tmp.y += L.m.position.y; tmp.project(cam);
+      tmp.copy(g.at); root.localToWorld(tmp); tmp.y += L[g.layer].position.y; tmp.project(cam);
       g.el.style.transform = `translate(${(tmp.x * .5 + .5) * w}px, ${(-tmp.y * .5 + .5) * h}px)`;
-      g.el.classList.toggle('left', tmp.x > .1);
-      g.el.classList.toggle('on', el > g.t && L[g === TAGS[0] ? 's' : 'm'].visible && explode < .3);
+      if (!g.cls) g.el.classList.toggle('left', tmp.x * .5 + .5 > .56);
+      g.el.classList.toggle('on', !POSTER && el > g.t && L[g.layer].visible && ex < .3);
     });
     R.render(scene, cam);
   };
   addEventListener('resize', size); size();
-  new IntersectionObserver(es => { const on = es.some(e => e.isIntersecting); if (on && !run) { run = true; requestAnimationFrame(frame); } else if (!on) run = false; }).observe(hero);
+  const begin = () => {
+    if (started) return; started = true; t0 = performance.now(); box.classList.add('is-live');
+    new IntersectionObserver(es => { const on = es.some(e => e.isIntersecting); if (on && !run) { run = true; size(); requestAnimationFrame(frame); } else if (!on) run = false; }).observe(hero);
+  };
+  if (POSTER) { box.classList.add('is-poster'); begin(); window.__h3dShot = () => { R.render(scene, cam); return cv.toDataURL('image/png'); }; return; }
+  addEventListener('hero:intro', () => setTimeout(begin, 120), { once: true });
+  setTimeout(begin, 2600);   // safety: start even if the intro never reports
 })();
