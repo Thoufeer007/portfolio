@@ -1213,6 +1213,121 @@ section .edc .edc__view--deg{padding-top:14px}section .edc .edc__deg{display:fle
 .venn { max-width: 470px; }
 .venn__c text { font-size: 19px; } .venn__c text.s { font-size: 11px; } .venn__m text { font-size: 18px; }
 @media (max-width: 820px) { .venn { max-width: 100%; } .cl__bt { font-size: 8.5px; } }
+
+/* ===== round 10 ===== */
+/* hero: exploded labels in a tidy column, clickable */
+.h3d__xl { display: none; }
+.h3d__xls { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .35s; }
+.h3d__xls.on { opacity: 1; }
+.h3d__lead { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.h3d__lead polyline { fill: none; stroke: var(--cobalt); stroke-width: 1; }
+.h3d__lead circle { fill: var(--paper); stroke: var(--cobalt); stroke-width: 1.5; }
+.h3d__xlh { position: absolute; right: 0; top: 0; margin: 0; font: 500 9.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.h3d__xls .h3d__xl { display: block; position: absolute; left: 0; top: 0; pointer-events: auto; cursor: pointer; text-align: left; padding: 4px 9px; border: 1px solid var(--cobalt); background: var(--cobalt); color: var(--paper); font: 500 10.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; transition: background .25s, color .25s, opacity .25s; }
+.h3d__xls .h3d__xl:hover { background: var(--ink); border-color: var(--ink); }
+.h3d__xls .h3d__xl[aria-pressed="true"] { background: var(--paper); color: var(--cobalt); box-shadow: inset 0 0 0 1px var(--cobalt); }
+.h3d__xls .h3d__xl.dim { opacity: .45; }
+.h3d__xls .h3d__xl:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+@media (max-width: 820px) { .h3d__xls .h3d__xl { font-size: 9px; padding: 3px 6px; } .h3d__xlh { font-size: 8px; } }
+
+/* three-discipline diagram: labels outside the circles, a clear centre, gentle motion */
+.venn { max-width: 500px; }
+.venn__c .t { font: 400 21px var(--serif); fill: var(--ink); }
+.venn__c .s { font: 500 11px var(--mono); letter-spacing: .04em; fill: var(--ink-3); text-transform: uppercase; }
+.venn__r { fill: rgba(29, 59, 201, .05); stroke: var(--ink); stroke-width: 1.2; transform-box: fill-box; transform-origin: center; animation: vBreath 7s ease-in-out infinite; }
+.venn__c[data-k="p"] .venn__r { animation-delay: -2.3s; } .venn__c[data-k="b"] .venn__r { animation-delay: -4.6s; }
+@keyframes vBreath { 50% { transform: scale(1.025); } }
+.venn__o { fill: var(--cobalt); }
+.venn__m rect { fill: var(--paper); stroke: var(--cobalt); stroke-width: 1.4; }
+.venn__m text { font: 400 italic 18px var(--serif); fill: var(--cobalt); }
+.venn__ring { fill: none; stroke: var(--cobalt); stroke-width: 1; transform-box: fill-box; transform-origin: center; animation: vRing 3.2s ease-out infinite; }
+@keyframes vRing { from { transform: scale(.7); opacity: .7; } to { transform: scale(1.9); opacity: 0; } }
+.venn__c { cursor: default; }
+.venn[data-h] .venn__r { fill: rgba(29, 59, 201, .02); stroke: var(--line); }
+.venn[data-h="a"] [data-k="a"] .venn__r, .venn[data-h="p"] [data-k="p"] .venn__r, .venn[data-h="b"] [data-k="b"] .venn__r { fill: rgba(29, 59, 201, .15); stroke: var(--cobalt); }
+.venn[data-h="a"] [data-k="a"] .t, .venn[data-h="p"] [data-k="p"] .t, .venn[data-h="b"] [data-k="b"] .t { fill: var(--cobalt); }
+.venn.is-anim .venn__r { stroke-dasharray: 640; stroke-dashoffset: 640; transition: stroke-dashoffset 1.6s var(--ease); }
+.venn.is-anim.in .venn__r { stroke-dashoffset: 0; }
+.venn.is-anim .venn__m, .venn.is-anim .venn__o { opacity: 0; transition: opacity .8s 1.4s; }
+.venn.is-anim.in .venn__m, .venn.is-anim.in .venn__o { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .venn__r, .venn__ring { animation: none; } }
+@media (max-width: 820px) { .venn { max-width: 100%; } .venn__c .t { font-size: 22px; } .venn__c .s { font-size: 12px; } }
+
+/* career line: playhead + softer bars for study-time work */
+.cl__bar--soft rect { fill-opacity: .55; stroke-dasharray: 3 2; }
+.cl__bar--top rect { height: 12px; fill: var(--ink) !important; }
+.cl__ph line { stroke: var(--cobalt); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.cl__ph text { font: 600 11px var(--mono); fill: var(--cobalt); }
+.cl__ph { opacity: 0; transition: opacity .4s; }
+.cl__chart.in .cl__ph { opacity: 1; }
+.cl__ph.done { opacity: 0 !important; transition: opacity 1s .6s; }
+.cl__now { animation: clNow 2s ease-in-out infinite; }
+@keyframes clNow { 50% { opacity: .35; } }
+
+/* degrees and certificates: one card format, one size */
+section .edc .edc__deg .edc__d { flex: 0 0 250px; }
+section .edc .edc__d figure { display: block; padding: 10px; height: 100%; }
+section .edc .edc__d figcaption { margin-top: 8px; font-size: 13px; line-height: 1.3; }
+section .edc .edc__d figcaption b { font: 500 13px/1.3 var(--sans); margin-bottom: 4px; }
+@media (max-width: 820px) { section .edc .edc__deg .edc__d, section .edc .edc__row .edc__c { flex-basis: 62vw; } }
+
+/* living in Barcelona: the same card format */
+.living ul { grid-template-columns: repeat(2, minmax(0, 220px)); gap: 14px; }
+.living li { display: block; padding: 10px; border: 1px solid var(--line); background: var(--paper-3); transition: transform .45s var(--ease), box-shadow .45s; }
+.living li:hover { transform: translateY(-4px); box-shadow: 0 22px 36px -28px rgba(22, 24, 29, .6); }
+.living img { display: block; width: 100%; height: auto; aspect-ratio: 1.38 / 1; object-fit: contain; object-position: 50% 50%; padding: 6px; background: var(--paper); box-shadow: none; }
+.living p { margin-top: 8px; font-size: 13px; line-height: 1.35; }
+.living b { font-size: 14px; margin-bottom: 2px; }
+@media (max-width: 820px) { .living ul { grid-template-columns: 1fr 1fr; } }
+.h3d__xls .h3d__xl { opacity: 1; } .h3d__xls .h3d__xl.dim { opacity: .45; } .h3d__xls .h3d__xl span { position: static; background: none; padding: 0; color: inherit; font: inherit; letter-spacing: inherit; }
+.h3d__scan { top: auto; bottom: 36px; } @media (max-width: 820px) { .h3d__xlh { display: none; } }
+
+/* ===== round 11 ===== */
+.xhair__t { display: none !important; }
+.cl__bt--out { font-size: 8.5px; fill: var(--ink-2); }
+.community__ph .ph--a { display: flex; flex-direction: column; }
+.community__ph .ph--a .mask { flex: 1 1 auto; aspect-ratio: auto; min-height: 0; }
+.community__ph .ph--a .mask img { height: 100%; object-fit: cover; object-position: 55% 35%; }
+@media (max-width: 820px) { .community__ph .ph--a .mask { aspect-ratio: 4 / 3.4; } }
+
+/* ===== round 12: Zigurat speaking photo large, India Pavilion in the smaller frame ===== */
+.community__ph .ph--a .mask img { object-position: 50% 62%; }
+.community__ph .ph--b .mask img { object-position: 50% 45%; }
+@media (max-width: 820px) { .community__ph .ph--a .mask { aspect-ratio: 3 / 4; } .community__ph .ph--a .mask img { object-position: 50% 70%; } }
+
+/* round 12b: diagram centre = a model cube the three disciplines flow into */
+.venn__in { fill: var(--cobalt); }
+.venn__cube path { stroke: var(--cobalt); stroke-width: 1.4; stroke-linejoin: round; }
+.venn__cube .f1 { fill: #DCE2FA; } .venn__cube .f2 { fill: #B9C4F2; } .venn__cube .f3 { fill: #8FA0E8; }
+.venn__cube { transform-box: fill-box; transform-origin: center; animation: vCube 3.6s ease-in-out infinite; }
+@keyframes vCube { 0%, 50% { transform: scale(.92); } 60% { transform: scale(1.12); } 75%, 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .venn__cube { animation: none; } .venn__in { display: none; } }
+
+.community__ph .ph--b .mask img { object-position: 50% 50%; }
+.community__ph .ph--a .mask img { object-position: 45% 70%; }
+
+/* round 12: CV dialog top bar with a clear way back */
+.cvd__top { position: absolute; top: 0; left: 0; right: 0; z-index: 3; display: flex; align-items: stretch; height: 46px; border-bottom: 1px solid var(--ink); background: var(--paper); }
+.cvd__lbl { flex: 1; display: flex; align-items: center; padding: 0 14px; margin: 0; font: 500 10.5px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cvd__back { border: 0; border-left: 1px solid var(--ink); background: var(--cobalt); color: var(--paper); padding: 0 16px; font: 500 12px var(--mono); letter-spacing: .05em; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
+.cvd__back:hover { background: var(--ink); }
+.cvd .cvd__top .cvd__x { position: static; min-height: 0; width: 46px; padding: 0; border: 0; border-left: 1px solid var(--ink); border-bottom: 0; font-size: 16px; }
+.cvd__form { padding-top: 64px !important; }
+.cvd__view { inset: 46px 0 0 !important; }
+.cvd:not(.is-view) .cvd__lbl { font-size: 0; }
+.cvd:not(.is-view) .cvd__back { display: none; }
+.cvd__back:focus-visible, .cvd .cvd__x:focus-visible { outline: 2px solid var(--ink); outline-offset: -3px; }
+@media (max-width: 820px) {
+  .cvd.is-view { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; border: 0; }
+  .cvd__lbl { display: none; }
+  .cvd__back { flex: 1; font-size: 13px; }
+  .cvd:not(.is-view) .cvd__top { justify-content: flex-end; }
+}
+
+/* round 12e: three hero buttons on one row */
+@media (min-width: 821px) { .hero__cta { flex-wrap: nowrap; gap: 8px; } .hero__cta .btn { padding-left: 16px; padding-right: 16px; white-space: nowrap; } }
+@media (min-width: 821px) { .hero__cta .btn { padding-left: 13px; padding-right: 13px; font-size: 14.5px; } .hero__cta { gap: 6px; } }
+@media (min-width: 821px) { .h3d__cap { margin-top: 4px; } .hero__nums li { white-space: nowrap; } }
 </style>
 <link rel="canonical" href="https://thoufeer007.github.io/portfolio/">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Person","name":"Thoufeer Muhammed Noushad","alternateName":"Thoufeer Noushad","url":"https://thoufeer007.github.io/portfolio/","image":"https://thoufeer007.github.io/portfolio/og-image.jpg","jobTitle":"Digital Delivery Lead & BIM Manager","description":"Digital Delivery Lead and BIM Manager: ISO 19650 information management, BIM automation and AI, project delivery across Europe, the Middle East and India.","address":{"@type":"PostalAddress","addressLocality":"Barcelona","addressCountry":"ES"},"alumniOf":[{"@type":"CollegeOrUniversity","name":"School of Planning and Architecture, New Delhi"},{"@type":"CollegeOrUniversity","name":"Universitat de Barcelona"}],"knowsAbout":["Building Information Modelling (BIM)","ISO 19650","Digital Delivery","BIM Automation","Revit","Dynamo","Precast Construction","AI in Construction"],"sameAs":["https://www.linkedin.com/in/thoufeer","https://github.com/thoufeer007"]}</script>
@@ -1252,12 +1367,13 @@ section .edc .edc__view--deg{padding-top:14px}section .edc .edc__deg{display:fle
     <p class="hero__lead" data-reveal>Architect turned digital delivery lead: BIM coordination, information management, automation and AI, and project delivery across Europe, the Middle East and India.</p>
     <div class="hero__cta" data-reveal>
       <a class="btn btn--ink" href="#work">See the twenty projects <span aria-hidden="true">→</span></a>
+      <button type="button" class="btn cv-open">View CV</button>
       <a class="btn" href="mailto:thoufeer.work@gmail.com">Email</a>
     </div>
     <dl class="hero__meta" data-reveal>
       <div><dt>Role</dt><dd>Digital Delivery Lead · BIM Manager</dd></div>
       <div><dt>Also</dt><dd>Director Operations, India</dd></div>
-      <div><dt>Education</dt><dd>Dual Master's · BIM management · project management</dd></div>
+      <div><dt>Education</dt><dd>Dual Master's · BIM and project management</dd></div>
       <div><dt>Experience</dt><dd>10+ years in practice · Europe, Middle East, India</dd></div>
       <div><dt>Focus</dt><dd>ISO 19650 · BIM automation &amp; AI</dd></div>
     </dl>
@@ -1276,12 +1392,12 @@ section .edc .edc__view--deg{padding-top:14px}section .edc .edc__deg{display:fle
       <p><b>Now.</b> Digital Delivery Lead at Elastic Potential, a precast engineering company in Barcelona, leading BIM automation and the use of AI in drawing production. He recently also took on Director Operations for India.</p>
       <p><b>And at home.</b> He co-runs Novacasa Builders, a family design-and-build practice in Kerala, with his father, a civil engineer.</p>
     </div>
-    <figure class="venn" aria-label="Where he works: architecture, project management, and BIM and AI, meeting in digital delivery">
-      <svg viewBox="0 0 470 372" role="img" aria-hidden="true">
-        <g class="venn__c" data-k="a"><circle cx="190" cy="138" r="86"/><text x="0" y="40">Architecture</text><text class="s" x="0" y="58">B.Arch · SPA</text><text class="s" x="0" y="72">Novacasa</text></g>
-        <g class="venn__c" data-k="p"><circle cx="280" cy="138" r="86"/><text x="470" y="40" text-anchor="end">Project</text><text x="470" y="60" text-anchor="end">management</text><text class="s" x="470" y="78" text-anchor="end">M.BEM · SPA</text><text class="s" x="470" y="92" text-anchor="end">Built Well · CBRE</text></g>
-        <g class="venn__c" data-k="b"><circle cx="235" cy="214" r="86"/><text x="235" y="328" text-anchor="middle">BIM, automation &amp; AI</text><text class="s" x="235" y="346" text-anchor="middle">Master's · UB · Zigurat</text><text class="s" x="235" y="360" text-anchor="middle">Techture · Elastic</text></g>
-        <g class="venn__m"><circle cx="235" cy="162" r="5"/><text x="235" y="186" text-anchor="middle">Digital</text><text x="235" y="204" text-anchor="middle">delivery</text></g>
+    <figure class="venn" aria-label="Where he works: architecture, project management, and BIM and AI, meeting where the model reaches the site">
+      <svg viewBox="0 0 480 432" role="img" aria-hidden="true">
+        <g class="venn__c" data-k="a"><circle class="venn__r" cx="172" cy="150" r="100"/><circle class="venn__o" r="4"><animateMotion dur="11s" begin="0s" repeatCount="indefinite" path="M72,150 a100,100 0 1,0 200,0 a100,100 0 1,0 -200,0"/></circle><text class="t" x="0" y="20">Architecture</text><text class="s" x="0" y="40">B.Arch · SPA New Delhi</text><text class="s" x="0" y="54">Novacasa, Kerala</text></g>
+        <g class="venn__c" data-k="p"><circle class="venn__r" cx="308" cy="150" r="100"/><circle class="venn__o" r="4"><animateMotion dur="13s" begin="2s" repeatCount="indefinite" path="M208,150 a100,100 0 1,0 200,0 a100,100 0 1,0 -200,0"/></circle><text class="t" x="480" y="20" text-anchor="end">Project management</text><text class="s" x="480" y="40" text-anchor="end">M.BEM · SPA New Delhi</text><text class="s" x="480" y="54" text-anchor="end">Built Well · CBRE</text></g>
+        <g class="venn__c" data-k="b"><circle class="venn__r" cx="240" cy="266" r="100"/><circle class="venn__o" r="4"><animateMotion dur="12s" begin="4s" repeatCount="indefinite" path="M140,266 a100,100 0 1,0 200,0 a100,100 0 1,0 -200,0"/></circle><text class="t" x="240" y="394" text-anchor="middle">BIM, automation &amp; AI</text><text class="s" x="240" y="414" text-anchor="middle">Master's · UB · Zigurat  ·  Techture · Elastic</text></g>
+        <g class="venn__m"><circle class="venn__ring" cx="240" cy="190" r="34"/><circle class="venn__in" r="4.5"><animateMotion dur="3.6s" begin="0s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.55;1" calcMode="linear" path="M172,150 L240,190"/><animate attributeName="opacity" values="0;1;1;0;0" keyTimes="0;.1;.5;.58;1" dur="3.6s" begin="0s" repeatCount="indefinite"/></circle><circle class="venn__in" r="4.5"><animateMotion dur="3.6s" begin="0.25s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.55;1" calcMode="linear" path="M308,150 L240,190"/><animate attributeName="opacity" values="0;1;1;0;0" keyTimes="0;.1;.5;.58;1" dur="3.6s" begin="0.25s" repeatCount="indefinite"/></circle><circle class="venn__in" r="4.5"><animateMotion dur="3.6s" begin="0.5s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.55;1" calcMode="linear" path="M240,266 L240,190"/><animate attributeName="opacity" values="0;1;1;0;0" keyTimes="0;.1;.5;.58;1" dur="3.6s" begin="0.5s" repeatCount="indefinite"/></circle><g class="venn__cube"><path class="f1" d="M240 170 L257 180 L240 190 L223 180 Z"/><path class="f2" d="M223 180 L240 190 L240 210 L223 200 Z"/><path class="f3" d="M257 180 L240 190 L240 210 L257 200 Z"/></g></g>
       </svg>
     </figure>
   </div>
@@ -1357,19 +1473,19 @@ section .edc .edc__view--deg{padding-top:14px}section .edc .edc__deg{display:fle
   <div class="feat__reel">
   <article class="spread">
     <div class="spread__text"><p class="k">Techture · India · 2021 – 24</p><h3 class="spread__t">Delhi Metro <i>Phase 4</i></h3><p class="spread__line">Led a team of 10 on BIM execution, from model to signed construction drawings.</p><dl class="nums nums--3"><div><dt>147</dt><dd>piers and 2 stations modelled</dd></div><div><dt>1,360</dt><dd>GFC sheets signed off</dd></div><div><dt>26</dt><dd>review packages in BIM 360</dd></div></dl><button class="btn spread__open" data-slug="delhi-metro">Open the project sheet <span aria-hidden="true">→</span></button></div>
-    <figure class="spread__fig spread__fig--tall"><div class="spread__grid"><img src="a/cb9d7d564859.webp" alt="Delhi Metro station reinforcement, Revit model" loading="lazy"></div><figcaption>Station reinforcement · Revit</figcaption></figure>
+    <figure class="spread__fig spread__fig--tall"><div class="spread__grid"><img src="a/cb9d7d564859.webp" alt="Delhi Metro station reinforcement, Revit model"></div><figcaption>Station reinforcement · Revit</figcaption></figure>
   </article>
   <article class="spread spread--flip">
     <div class="spread__text"><p class="k">Techture · Saudi Arabia · 2021 – 24</p><h3 class="spread__t">Jubail <i>digital twin</i></h3><p class="spread__line">Set up the common data environment for the Royal Commission for Jubail and Yanbu and governed every deliverable in it.</p><dl class="nums nums--3"><div><dt>2,404</dt><dd>deliverables across 31 facilities</dd></div><div><dt>672 of 1,771</dt><dd>contractor files passed his naming audit</dd></div><div><dt>372</dt><dd>review comments closed</dd></div></dl><button class="btn spread__open" data-slug="jubail-digital-twin">Open the project sheet <span aria-hidden="true">→</span></button></div>
-    <figure class="spread__fig peel"><div class="spread__grid peel__view"><img class="is-on" src="a/e0477269c281.webp" alt="Pump station, building model" loading="lazy"><img src="a/7d1d5ca0d5e5.webp" alt="Pump station, structure model" loading="lazy"><img src="a/1f78d50a65cf.webp" alt="Pump station, pumps and piping model" loading="lazy"></div><div class="peel__keys" role="group" aria-label="Peel the pump station"><button type="button" data-layer="0" aria-pressed="true">Building</button><button type="button" data-layer="1" aria-pressed="false">Structure</button><button type="button" data-layer="2" aria-pressed="false">Pumps</button></div><figcaption>Peel the pump station · three real models</figcaption></figure>
+    <figure class="spread__fig peel"><div class="spread__grid peel__view"><img class="is-on" src="a/e0477269c281.webp" alt="Pump station, building model"><img src="a/7d1d5ca0d5e5.webp" alt="Pump station, structure model"><img src="a/1f78d50a65cf.webp" alt="Pump station, pumps and piping model"></div><div class="peel__keys" role="group" aria-label="Peel the pump station"><button type="button" data-layer="0" aria-pressed="true">Building</button><button type="button" data-layer="1" aria-pressed="false">Structure</button><button type="button" data-layer="2" aria-pressed="false">Pumps</button></div><figcaption>Peel the pump station · three real models</figcaption></figure>
   </article>
   <article class="spread">
     <div class="spread__text"><p class="k">Scruffy Dog · Saudi Arabia · Jul – Sep 2025</p><h3 class="spread__t">Qiddiya <i>theme park</i></h3><p class="spread__line">BIM coordination for a €1B+ theme park: the information plan, model-health checks and Power BI dashboards that told the team what to fix.</p><dl class="nums nums--3"><div><dt>10+</dt><dd>models federated</dd></div><div><dt>95%</dt><dd>of clashes resolved before construction</dd></div><div><dt>236</dt><dd>delivery checks in one dashboard</dd></div></dl><button class="btn spread__open" data-slug="qiddiya">Open the project sheet <span aria-hidden="true">→</span></button></div>
-    <figure class="spread__fig"><div class="spread__sheet"><img src="a/e9925f66724e.webp" alt="Power BI model-health dashboard" loading="lazy"></div><figcaption>Model-health dashboard · Power BI</figcaption></figure>
+    <figure class="spread__fig"><div class="spread__sheet"><img src="a/e9925f66724e.webp" alt="Power BI model-health dashboard"></div><figcaption>Model-health dashboard · Power BI</figcaption></figure>
   </article>
   <article class="spread spread--flip">
     <div class="spread__text"><p class="k">Techture · India · 2021 – 24</p><h3 class="spread__t">Vijayawada <i>Airport</i></h3><p class="spread__line">Wrote the BIM Manual for the Airports Authority of India project and ran federated coordination across every discipline.</p><dl class="nums nums--3"><div><dt>7</dt><dd>disciplines in one model</dd></div><div><dt>28</dt><dd>clash tests</dd></div><div><dt>6,363</dt><dd>clashes found and tracked</dd></div></dl><button class="btn spread__open" data-slug="vijayawada-airport">Open the project sheet <span aria-hidden="true">→</span></button></div>
-    <figure class="spread__fig"><div class="spread__grid"><img src="a/a1949c7e8d5b.webp" alt="Vijayawada Airport, federated terminal model" loading="lazy"></div><figcaption>Federated terminal model</figcaption></figure>
+    <figure class="spread__fig"><div class="spread__grid"><img src="a/a1949c7e8d5b.webp" alt="Vijayawada Airport, federated terminal model"></div><figcaption>Federated terminal model</figcaption></figure>
   </article>
   </div>
 </section>
@@ -1397,9 +1513,9 @@ section .edc .edc__view--deg{padding-top:14px}section .edc .edc__deg{display:fle
 <div class="edc">
   <p class="edc__sum"><span><b data-n="4">4</b> degrees</span><span><b data-n="6">6</b> certificates</span><span><b data-n="2">2</b> Master's</span><span><b>2017 → 2026</b></span></p>
   <div class="edc__bar"><p class="k" id="education">01 · Degrees · tap to enlarge</p><p class="edc__nav"><button type="button" class="reel__arr" data-s="-1" data-t="deg" aria-label="Previous degrees">←</button><button type="button" class="reel__arr" data-s="1" data-t="deg" aria-label="Next degrees">→</button></p></div>
-  <div class="edc__view edc__view--deg" data-v="deg" tabindex="0" aria-label="Degrees. Use the arrows or swipe."><ul class="edc__deg"><li class="edc__d"><span class="edc__y">2025 – 26</span><figure><div class="creds__paper"><img src="a/c844a419135a.webp" alt="Master's in Global BIM Management · 9.16 / 10, Universitat de Barcelona (IL3) + Zigurat · 2025 – 2026" loading="lazy"></div><figcaption><b>Master's in Global BIM Management · 9.16 / 10</b><span>Universitat de Barcelona (IL3) · Zigurat Institute of Technology · 2025 – 2026</span></figcaption></figure></li><li class="edc__d" id="postgraduate"><span class="edc__y">2024 – 25</span><figure><div class="creds__paper"><img src="a/1f09d390cfc4.webp" alt="Postgraduate Diploma (Level 7), Strategic Management and Leadership, SSBM Geneva · 2024 – 2025" loading="lazy"></div><figcaption><b>Postgraduate Diploma (Level 7), Strategic Management and Leadership</b><span>SSBM Geneva · 2024 – 2025</span></figcaption></figure></li><li class="edc__d"><span class="edc__y">2021</span><figure><div class="creds__paper"><img src="a/6acd816e7052.webp" alt="Master of Building Engineering and Management, First Class with Distinction, SPA New Delhi · 2021" loading="lazy"></div><figcaption><b>Master of Building Engineering and Management, First Class with Distinction</b><span>SPA New Delhi · 2021</span></figcaption></figure></li><li class="edc__d"><span class="edc__y">2017</span><figure><div class="creds__paper"><img src="a/64ee1f27084b.webp" alt="Bachelor of Architecture, First Class, SPA New Delhi · 2017" loading="lazy"></div><figcaption><b>Bachelor of Architecture, First Class</b><span>SPA New Delhi · 2017</span></figcaption></figure></li></ul></div>
+  <div class="edc__view edc__view--deg" data-v="deg" tabindex="0" aria-label="Degrees. Use the arrows or swipe."><ul class="edc__deg"><li class="edc__d"><span class="edc__y">2025 – 26</span><figure><div class="creds__paper"><img src="a/c844a419135a.webp" alt="Master's in Global BIM Management · 9.16 / 10, Universitat de Barcelona (IL3) + Zigurat · 2025 – 2026"></div><figcaption><b>Master's in Global BIM Management · 9.16 / 10</b><span>Universitat de Barcelona (IL3) · Zigurat Institute of Technology · 2025 – 2026</span></figcaption></figure></li><li class="edc__d" id="postgraduate"><span class="edc__y">2024 – 25</span><figure><div class="creds__paper"><img src="a/1f09d390cfc4.webp" alt="Postgraduate Diploma (Level 7), Strategic Management and Leadership, SSBM Geneva · 2024 – 2025"></div><figcaption><b>Postgraduate Diploma (Level 7), Strategic Management and Leadership</b><span>SSBM Geneva · 2024 – 2025</span></figcaption></figure></li><li class="edc__d"><span class="edc__y">2021</span><figure><div class="creds__paper"><img src="a/6acd816e7052.webp" alt="Master of Building Engineering and Management, First Class with Distinction, SPA New Delhi · 2021"></div><figcaption><b>Master of Building Engineering and Management, First Class with Distinction</b><span>SPA New Delhi · 2021</span></figcaption></figure></li><li class="edc__d"><span class="edc__y">2017</span><figure><div class="creds__paper"><img src="a/64ee1f27084b.webp" alt="Bachelor of Architecture, First Class, SPA New Delhi · 2017"></div><figcaption><b>Bachelor of Architecture, First Class</b><span>SPA New Delhi · 2017</span></figcaption></figure></li></ul></div>
   <div class="edc__bar" id="certificates"><p class="k">02 · Certificates · tap to enlarge</p><p class="edc__nav"><button type="button" class="reel__arr" data-s="-1" data-t="certs" aria-label="Previous certificates">←</button><button type="button" class="reel__arr" data-s="1" data-t="certs" aria-label="Next certificates">→</button></p></div>
-  <div class="edc__view" data-v="certs" tabindex="0" aria-label="Certificates. Use the arrows or swipe."><ul class="edc__row"><li class="edc__c"><span class="edc__y">2025</span><figure><div class="creds__paper"><img src="a/af001d6b6464.webp" alt="Artificial Intelligence Applied to Construction Engineering · 9.8 / 10, UPC microcredential · 2025" loading="lazy"></div><figcaption><b>Artificial Intelligence Applied to Construction Engineering · 9.8 / 10</b><span>UPC microcredential · 2025</span></figcaption></figure></li><li class="edc__c"><span class="edc__y">2026</span><figure><div class="creds__paper"><img src="a/4641f21d235c.webp" alt="Revit 2026 course, Autodesk Authorized Academic Partner · 2026" loading="lazy"></div><figcaption><b>Revit 2026 course</b><span>Autodesk Authorized Academic Partner · 2026</span></figcaption></figure></li><li class="edc__c"><span class="edc__y">2025</span><figure><div class="creds__paper"><img src="a/abc64e2d4f57.webp" alt="ISO 19650 Information Manager, Level 3 Expert, Plannerly · 2025" loading="lazy"></div><figcaption><b>ISO 19650 Information Manager, Level 3 Expert</b><span>Plannerly · 2025</span></figcaption></figure></li><li class="edc__c"><span class="edc__y">2026</span><figure><div class="creds__paper"><img src="a/eb911261cc20.webp" alt="SYNCHRO 4D Pro, Bentley Systems · 2026" loading="lazy"></div><figcaption><b>SYNCHRO 4D Pro</b><span>Bentley Systems · 2026</span></figcaption></figure></li><li class="edc__c"><span class="edc__y">2026</span><figure><div class="creds__paper"><img src="a/82e29deccbbc.webp" alt="Practical AI for SMEs, 150 h, EOI, Government of Spain · 2026" loading="lazy"></div><figcaption><b>Practical AI for SMEs, 150 h</b><span>EOI, Government of Spain · 2026</span></figcaption></figure></li><li class="edc__c"><span class="edc__y">2023 – 24</span><figure><div class="creds__paper"><img src="a/c72cdd00c4d9.webp" alt="Project Management: Theory and Practice, IIT Delhi, Continuing Education · 2023 – 2024" loading="lazy"></div><figcaption><b>Project Management: Theory and Practice</b><span>IIT Delhi, Continuing Education · 2023 – 2024</span></figcaption></figure></li></ul></div>
+  <div class="edc__view" data-v="certs" tabindex="0" aria-label="Certificates. Use the arrows or swipe."><ul class="edc__row"><li class="edc__c"><span class="edc__y">2025</span><figure><div class="creds__paper"><img src="a/af001d6b6464.webp" alt="Artificial Intelligence Applied to Construction Engineering · 9.8 / 10, UPC microcredential · 2025"></div><figcaption><b>Artificial Intelligence Applied to Construction Engineering · 9.8 / 10</b><span>UPC microcredential · 2025</span></figcaption></figure></li><li class="edc__c"><span class="edc__y">2026</span><figure><div class="creds__paper"><img src="a/4641f21d235c.webp" alt="Revit 2026 course, Autodesk Authorized Academic Partner · 2026"></div><figcaption><b>Revit 2026 course</b><span>Autodesk Authorized Academic Partner · 2026</span></figcaption></figure></li><li class="edc__c"><span class="edc__y">2025</span><figure><div class="creds__paper"><img src="a/abc64e2d4f57.webp" alt="ISO 19650 Information Manager, Level 3 Expert, Plannerly · 2025"></div><figcaption><b>ISO 19650 Information Manager, Level 3 Expert</b><span>Plannerly · 2025</span></figcaption></figure></li><li class="edc__c"><span class="edc__y">2026</span><figure><div class="creds__paper"><img src="a/eb911261cc20.webp" alt="SYNCHRO 4D Pro, Bentley Systems · 2026"></div><figcaption><b>SYNCHRO 4D Pro</b><span>Bentley Systems · 2026</span></figcaption></figure></li><li class="edc__c"><span class="edc__y">2026</span><figure><div class="creds__paper"><img src="a/82e29deccbbc.webp" alt="Practical AI for SMEs, 150 h, EOI, Government of Spain · 2026"></div><figcaption><b>Practical AI for SMEs, 150 h</b><span>EOI, Government of Spain · 2026</span></figcaption></figure></li><li class="edc__c"><span class="edc__y">2023 – 24</span><figure><div class="creds__paper"><img src="a/c72cdd00c4d9.webp" alt="Project Management: Theory and Practice, IIT Delhi, Continuing Education · 2023 – 2024"></div><figcaption><b>Project Management: Theory and Practice</b><span>IIT Delhi, Continuing Education · 2023 – 2024</span></figcaption></figure></li></ul></div>
 </div>
   <p class="k creds__sub" id="skills">04 · Skills schedule · tap a project to see it</p>
   <table class="sked"><caption class="vh">Skills schedule</caption><thead><tr><th scope="col">Ref</th><th scope="col">Discipline</th><th scope="col">Key skills</th><th scope="col">Used on</th></tr></thead><tbody><tr><td class="sked__r">S-01</td><th scope="row">Information management</th><td class="sked__s">ISO 19650-1/-2, BEP, EIR/OIR/AIR, MIDP/TIDP, CDE, naming conventions, LOD/LOIN, IFC/openBIM, BCF, COBie, model audit, QA/QC</td><td class="sked__u"><button type="button" data-open="jubail-digital-twin">Jubail digital twin</button><button type="button" data-open="misk-city">MISK City</button><button type="button" data-open="wezig">WeZig</button></td></tr><tr><td class="sked__r">S-02</td><th scope="row">Coordination and VDC</th><td class="sked__s">model federation, clash detection, Navisworks, Solibri, Revizto, BIMcollab, ACC/BIM 360, Plannerly, Catenda, CUBE.ms</td><td class="sked__u"><button type="button" data-open="qiddiya">Qiddiya</button><button type="button" data-open="delhi-metro">Delhi Metro</button></td></tr><tr><td class="sked__r">S-03</td><th scope="row">AI and automation</th><td class="sked__s">Claude Code, Codex, MCP (Revit, AutoCAD), multi-agent workflows, responsible AI, Python, Dynamo, pyRevit, Revit API, Power BI, git/GitHub</td><td class="sked__u"><button type="button" data-open="automation-ai">Precast automation</button></td></tr><tr><td class="sked__r">S-04</td><th scope="row">Authoring</th><td class="sked__s">Revit, shared parameters, AutoCAD, Tekla Structures, ArchiCAD, Rhino, 3ds Max, Enscape, Lumion, Twinmotion</td><td class="sked__u"><button type="button" data-open="delhi-metro">Delhi Metro</button><button type="button" data-open="e12-bridges">E-12 bridges</button><button type="button" data-open="homes">Kerala homes</button></td></tr><tr><td class="sked__r">S-05</td><th scope="row">Project delivery</th><td class="sked__s">4D/5D BIM, SYNCHRO 4D, MS Project, Primavera P6, digital twins, risk registers, budgets, stakeholder management, team leadership</td><td class="sked__u"><button type="button" data-open="stryker-lab">CBRE lab fit-out</button><button type="button" data-open="strategy-audit">Strategy and audit</button></td></tr></tbody></table>
@@ -1419,17 +1535,17 @@ section .edc .edc__view--deg{padding-top:14px}section .edc .edc__deg{display:fle
     <div class="living" id="living">
       <p class="k">Living in Barcelona</p>
       <ul>
-        <li><img src="a/75ae53db1532.webp" alt="Spanish course certificate, NL College" loading="lazy"><p><b>Spanish B1</b>Course, NL College, Instituto Cervantes-accredited · 2025</p></li>
-        <li><img src="a/315e1113a2c8.webp" alt="Catalan course certificate, CPNL Barcelona" loading="lazy"><p><b>Learning Catalan</b>CPNL Bàsic 1, 45 h · 2025</p></li>
+        <li><img src="a/75ae53db1532.webp" alt="Spanish course certificate, NL College"><p><b>Spanish B1</b>Course, NL College, Instituto Cervantes-accredited · 2025</p></li>
+        <li><img src="a/315e1113a2c8.webp" alt="Catalan course certificate, CPNL Barcelona"><p><b>Learning Catalan</b>CPNL Bàsic 1, 45 h · 2025</p></li>
       </ul>
     </div>
   </div>
   <div class="community__ph">
-    <figure class="ph ph--a"><div class="mask"><img src="a/8b7c0757307f.webp" alt="India Pavilion, Smart City Expo 2026"></div><figcaption><span>A</span>India Pavilion · Smart City Expo 2026</figcaption></figure>
-    <figure class="ph ph--b"><div class="mask"><img src="a/3fb77ec22094.webp" alt="Speaking at a Zigurat event"></div><figcaption><span>B</span>Speaking at Zigurat · 2025</figcaption></figure>
-    <figure class="ph ph--c"><div class="mask"><img src="a/612a16d7dbf0.webp" alt="UIA World Congress of Architects 2026"></div><figcaption><span>C</span>UIA World Congress · 2026</figcaption></figure>
-    <figure class="ph ph--d"><div class="mask"><img src="a/7c7a1d8255ad.webp" alt="With the Master's diploma, Global BIM Management"></div><figcaption><span>D</span>Master's diploma · 9.16 / 10</figcaption></figure>
-    <figure class="ph ph--e"><div class="mask"><img src="a/981012b7a6ae.webp" alt="Zigurat People, University of Barcelona"></div><figcaption><span>E</span>Zigurat Student Week · 2026</figcaption></figure>
+    <figure class="ph ph--a"><div class="mask"><img src="a/141b1963052c.webp" alt="Presenting at a Zigurat event, Barcelona"></div><figcaption><span>A</span>Speaking at Zigurat · 2025</figcaption></figure>
+    <figure class="ph ph--b"><div class="mask"><img src="a/03bdb8598b53.webp" alt="At the Viksit Bharat stand, India Pavilion, Smart City Expo World Congress 2026"></div><figcaption><span>B</span>Smart City Expo 2026 · India Pavilion</figcaption></figure>
+    <figure class="ph ph--c"><div class="mask"><img src="a/d6ed67f30f2e.webp" alt="UIA World Congress of Architects 2026"></div><figcaption><span>C</span>UIA World Congress · 2026</figcaption></figure>
+    <figure class="ph ph--d"><div class="mask"><img src="a/fdb5431a8b42.webp" alt="With the Master's diploma, Global BIM Management"></div><figcaption><span>D</span>Master's diploma · 9.16 / 10</figcaption></figure>
+    <figure class="ph ph--e"><div class="mask"><img src="a/2a84b637c7b4.webp" alt="Zigurat People, University of Barcelona"></div><figcaption><span>E</span>Zigurat Student Week · 2026</figcaption></figure>
   </div>
 </section>
 <section class="voices" id="colleagues" aria-label="What colleagues say">
@@ -1480,7 +1596,7 @@ section .edc .edc__view--deg{padding-top:14px}section .edc .edc__deg{display:fle
     <nav aria-label="Contact"><p class="sf__h">Contact</p><ul><li><button type="button" class="cv-open">View CV</button></li><li><a href="mailto:thoufeer.work@gmail.com">Email</a></li><li><a href="https://www.linkedin.com/in/thoufeer" target="_blank" rel="noopener">LinkedIn</a></li></ul></nav>
   </div>
   <div class="sf__base"><p>© Thoufeer Muhammed Noushad · Barcelona</p>
-    <p class="sf__icons"><a href="https://www.linkedin.com/in/thoufeer" target="_blank" rel="noopener" aria-label="LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 9.5v8M6.5 6.4v.1M10.5 17.5v-8M10.5 13c0-2 1.3-3.6 3.2-3.6 1.8 0 2.8 1.2 2.8 3.4v4.7"/></svg></a><a href="mailto:thoufeer.work@gmail.com" aria-label="Email"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15v10h-15zM4.5 7.5l7.5 6 7.5-6"/></svg></a></p></div>
+    <p class="sf__note" style="font-size:11px;opacity:.7">Visits are counted anonymously: no cookies, no IP addresses.</p><p class="sf__icons"><a href="https://www.linkedin.com/in/thoufeer" target="_blank" rel="noopener" aria-label="LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 9.5v8M6.5 6.4v.1M10.5 17.5v-8M10.5 13c0-2 1.3-3.6 3.2-3.6 1.8 0 2.8 1.2 2.8 3.4v4.7"/></svg></a><a href="mailto:thoufeer.work@gmail.com" aria-label="Email"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15v10h-15zM4.5 7.5l7.5 6 7.5-6"/></svg></a></p></div>
 </footer>
 <template id="views"><figure data-slug="delhi-metro"><img src="a/846c5658e5b7.webp" alt="Delhi Metro · station, Revit model"><figcaption>Delhi Metro · station</figcaption></figure><figure data-slug="jubail-digital-twin"><img src="a/bbf2e0ac8630.webp" alt="Jubail · lift station, Revit model"><figcaption>Jubail · lift station</figcaption></figure><figure data-slug="international-models"><img src="a/7616d67c94ff.webp" alt="Cleburne PAC · interior · USA, Revit model"><figcaption>Cleburne PAC · interior · USA</figcaption></figure><figure data-slug="jubail-digital-twin"><img src="a/0bf15f194b09.webp" alt="Jubail · generator building, Revit model"><figcaption>Jubail · generator building</figcaption></figure><figure data-slug="vijayawada-airport"><img src="a/a1949c7e8d5b.webp" alt="Vijayawada · terminal, Revit model"><figcaption>Vijayawada · terminal</figcaption></figure><figure data-slug="international-models"><img src="a/19018d08147b.webp" alt="Lakecrest Drive · Canada, Revit model"><figcaption>Lakecrest Drive · Canada</figcaption></figure><figure data-slug="delhi-metro"><img src="a/b74d16d1c9fc.webp" alt="Delhi Metro · slab rebar, Revit model"><figcaption>Delhi Metro · slab rebar</figcaption></figure><figure data-slug="international-models"><img src="a/22ba33c05123.webp" alt="NSLC Annapolis · USA, Revit model"><figcaption>NSLC Annapolis · USA</figcaption></figure><figure data-slug="international-models"><img src="a/7065943a733d.webp" alt="Godrej Tower 01 · Gurugram, Revit model"><figcaption>Godrej Tower 01 · Gurugram</figcaption></figure><figure data-slug="international-models"><img src="a/6f4328efcf43.webp" alt="Cleburne PAC · USA, Revit model"><figcaption>Cleburne PAC · USA</figcaption></figure><figure data-slug="jubail-digital-twin"><img src="a/1f78d50a65cf.webp" alt="Jubail · pump station, Revit model"><figcaption>Jubail · pump station</figcaption></figure><figure data-slug="international-models"><img src="a/31a2c3182297.webp" alt="Lakecrest Drive · Canada, Revit model"><figcaption>Lakecrest Drive · Canada</figcaption></figure><figure data-slug="delhi-metro"><img src="a/67eb18667d7a.webp" alt="Delhi Metro · station rebar, Revit model"><figcaption>Delhi Metro · station rebar</figcaption></figure><figure data-slug="delhi-metro"><img src="a/691603cda7e6.webp" alt="Delhi Metro · station, Revit model"><figcaption>Delhi Metro · station</figcaption></figure></template>
 </main>
@@ -1498,7 +1614,7 @@ section .edc .edc__view--deg{padding-top:14px}section .edc .edc__deg{display:fle
 </footer>
 
 <dialog class="cvd" aria-labelledby="cvd-t">
-  <button type="button" class="cvd__x">Close ✕</button>
+  <div class="cvd__top"><p class="cvd__lbl">Thoufeer Muhammed Noushad · CV · view only</p><button type="button" class="cvd__back">← Back to the website</button><button type="button" class="cvd__x" aria-label="Close the CV">✕</button></div>
   <form class="cvd__form" novalidate>
     <h2 id="cvd-t" class="cvd__t">View the CV</h2>
     <p class="cvd__lead">Please share your details to open the CV.</p>
@@ -1511,7 +1627,7 @@ section .edc .edc__view--deg{padding-top:14px}section .edc .edc__deg{display:fle
     <p class="cvd__note">Used only to reply to you.</p>
     <p class="cvd__msg" role="status"></p>
   </form>
-  <div class="cvd__view" hidden><iframe title="CV, view only" loading="lazy"></iframe></div>
+  <div class="cvd__view" hidden><iframe title="CV, view only"></iframe></div>
 </dialog>
 <dialog class="lb" aria-label="Certificate, enlarged"><figure><img alt=""><figcaption></figcaption></figure><button type="button" class="lb__x">Close ✕</button></dialog>
 
@@ -1538,7 +1654,50 @@ section .edc .edc__view--deg{padding-top:14px}section .edc .edc__deg{display:fle
 <script>!function(t,i){"object"==typeof exports&&"undefined"!=typeof module?module.exports=i():"function"==typeof define&&define.amd?define(i):(t="undefined"!=typeof globalThis?globalThis:t||self).Lenis=i()}(this,(function(){"use strict";function clamp(t,i,e){return Math.max(t,Math.min(i,e))}class Animate{constructor(){this.isRunning=!1,this.value=0,this.from=0,this.to=0,this.currentTime=0}advance(t){var i;if(!this.isRunning)return;let e=!1;if(this.duration&&this.easing){this.currentTime+=t;const i=clamp(0,this.currentTime/this.duration,1);e=i>=1;const s=e?1:this.easing(i);this.value=this.from+(this.to-this.from)*s}else this.lerp?(this.value=function damp(t,i,e,s){return function lerp(t,i,e){return(1-e)*t+e*i}(t,i,1-Math.exp(-e*s))}(this.value,this.to,60*this.lerp,t),Math.round(this.value)===this.to&&(this.value=this.to,e=!0)):(this.value=this.to,e=!0);e&&this.stop(),null===(i=this.onUpdate)||void 0===i||i.call(this,this.value,e)}stop(){this.isRunning=!1}fromTo(t,i,{lerp:e,duration:s,easing:o,onStart:n,onUpdate:l}){this.from=this.value=t,this.to=i,this.lerp=e,this.duration=s,this.easing=o,this.currentTime=0,this.isRunning=!0,null==n||n(),this.onUpdate=l}}class Dimensions{constructor(t,i,{autoResize:e=!0,debounce:s=250}={}){this.wrapper=t,this.content=i,this.width=0,this.height=0,this.scrollHeight=0,this.scrollWidth=0,this.resize=()=>{this.onWrapperResize(),this.onContentResize()},this.onWrapperResize=()=>{this.wrapper instanceof Window?(this.width=window.innerWidth,this.height=window.innerHeight):(this.width=this.wrapper.clientWidth,this.height=this.wrapper.clientHeight)},this.onContentResize=()=>{this.wrapper instanceof Window?(this.scrollHeight=this.content.scrollHeight,this.scrollWidth=this.content.scrollWidth):(this.scrollHeight=this.wrapper.scrollHeight,this.scrollWidth=this.wrapper.scrollWidth)},e&&(this.debouncedResize=function debounce(t,i){let e;return function(...s){let o=this;clearTimeout(e),e=setTimeout((()=>{e=void 0,t.apply(o,s)}),i)}}(this.resize,s),this.wrapper instanceof Window?window.addEventListener("resize",this.debouncedResize,!1):(this.wrapperResizeObserver=new ResizeObserver(this.debouncedResize),this.wrapperResizeObserver.observe(this.wrapper)),this.contentResizeObserver=new ResizeObserver(this.debouncedResize),this.contentResizeObserver.observe(this.content)),this.resize()}destroy(){var t,i;null===(t=this.wrapperResizeObserver)||void 0===t||t.disconnect(),null===(i=this.contentResizeObserver)||void 0===i||i.disconnect(),this.wrapper===window&&this.debouncedResize&&window.removeEventListener("resize",this.debouncedResize,!1)}get limit(){return{x:this.scrollWidth-this.width,y:this.scrollHeight-this.height}}}class Emitter{constructor(){this.events={}}emit(t,...i){var e;let s=this.events[t]||[];for(let t=0,o=s.length;t<o;t++)null===(e=s[t])||void 0===e||e.call(s,...i)}on(t,i){var e;return(null===(e=this.events[t])||void 0===e?void 0:e.push(i))||(this.events[t]=[i]),()=>{var e;this.events[t]=null===(e=this.events[t])||void 0===e?void 0:e.filter((t=>i!==t))}}off(t,i){var e;this.events[t]=null===(e=this.events[t])||void 0===e?void 0:e.filter((t=>i!==t))}destroy(){this.events={}}}const t=100/6,i={passive:!1};class VirtualScroll{constructor(e,s={wheelMultiplier:1,touchMultiplier:1}){this.element=e,this.options=s,this.touchStart={x:0,y:0},this.lastDelta={x:0,y:0},this.window={width:0,height:0},this.emitter=new Emitter,this.onTouchStart=t=>{const{clientX:i,clientY:e}=t.targetTouches?t.targetTouches[0]:t;this.touchStart.x=i,this.touchStart.y=e,this.lastDelta={x:0,y:0},this.emitter.emit("scroll",{deltaX:0,deltaY:0,event:t})},this.onTouchMove=t=>{const{clientX:i,clientY:e}=t.targetTouches?t.targetTouches[0]:t,s=-(i-this.touchStart.x)*this.options.touchMultiplier,o=-(e-this.touchStart.y)*this.options.touchMultiplier;this.touchStart.x=i,this.touchStart.y=e,this.lastDelta={x:s,y:o},this.emitter.emit("scroll",{deltaX:s,deltaY:o,event:t})},this.onTouchEnd=t=>{this.emitter.emit("scroll",{deltaX:this.lastDelta.x,deltaY:this.lastDelta.y,event:t})},this.onWheel=i=>{let{deltaX:e,deltaY:s,deltaMode:o}=i;e*=1===o?t:2===o?this.window.width:1,s*=1===o?t:2===o?this.window.height:1,e*=this.options.wheelMultiplier,s*=this.options.wheelMultiplier,this.emitter.emit("scroll",{deltaX:e,deltaY:s,event:i})},this.onWindowResize=()=>{this.window={width:window.innerWidth,height:window.innerHeight}},window.addEventListener("resize",this.onWindowResize,!1),this.onWindowResize(),this.element.addEventListener("wheel",this.onWheel,i),this.element.addEventListener("touchstart",this.onTouchStart,i),this.element.addEventListener("touchmove",this.onTouchMove,i),this.element.addEventListener("touchend",this.onTouchEnd,i)}on(t,i){return this.emitter.on(t,i)}destroy(){this.emitter.destroy(),window.removeEventListener("resize",this.onWindowResize,!1),this.element.removeEventListener("wheel",this.onWheel,i),this.element.removeEventListener("touchstart",this.onTouchStart,i),this.element.removeEventListener("touchmove",this.onTouchMove,i),this.element.removeEventListener("touchend",this.onTouchEnd,i)}}return class Lenis{constructor({wrapper:t=window,content:i=document.documentElement,eventsTarget:e=t,smoothWheel:s=!0,syncTouch:o=!1,syncTouchLerp:n=.075,touchInertiaMultiplier:l=35,duration:r,easing:h=(t=>Math.min(1,1.001-Math.pow(2,-10*t))),lerp:a=.1,infinite:c=!1,orientation:u="vertical",gestureOrientation:d="vertical",touchMultiplier:p=1,wheelMultiplier:m=1,autoResize:v=!0,prevent:g,virtualScroll:S,__experimental__naiveDimensions:w=!1}={}){this._isScrolling=!1,this._isStopped=!1,this._isLocked=!1,this._preventNextNativeScrollEvent=!1,this._resetVelocityTimeout=null,this.time=0,this.userData={},this.lastVelocity=0,this.velocity=0,this.direction=0,this.animate=new Animate,this.emitter=new Emitter,this.onPointerDown=t=>{1===t.button&&this.reset()},this.onVirtualScroll=t=>{if("function"==typeof this.options.virtualScroll&&!1===this.options.virtualScroll(t))return;const{deltaX:i,deltaY:e,event:s}=t;if(this.emitter.emit("virtual-scroll",{deltaX:i,deltaY:e,event:s}),s.ctrlKey)return;const o=s.type.includes("touch"),n=s.type.includes("wheel");this.isTouching="touchstart"===s.type||"touchmove"===s.type;if(this.options.syncTouch&&o&&"touchstart"===s.type&&!this.isStopped&&!this.isLocked)return void this.reset();const l=0===i&&0===e,r="vertical"===this.options.gestureOrientation&&0===e||"horizontal"===this.options.gestureOrientation&&0===i;if(l||r)return;let h=s.composedPath();h=h.slice(0,h.indexOf(this.rootElement));const a=this.options.prevent;if(h.find((t=>{var i,e,s,l,r;return t instanceof HTMLElement&&("function"==typeof a&&(null==a?void 0:a(t))||(null===(i=t.hasAttribute)||void 0===i?void 0:i.call(t,"data-lenis-prevent"))||o&&(null===(e=t.hasAttribute)||void 0===e?void 0:e.call(t,"data-lenis-prevent-touch"))||n&&(null===(s=t.hasAttribute)||void 0===s?void 0:s.call(t,"data-lenis-prevent-wheel"))||(null===(l=t.classList)||void 0===l?void 0:l.contains("lenis"))&&!(null===(r=t.classList)||void 0===r?void 0:r.contains("lenis-stopped")))})))return;if(this.isStopped||this.isLocked)return void s.preventDefault();if(!(this.options.syncTouch&&o||this.options.smoothWheel&&n))return this.isScrolling="native",void this.animate.stop();s.preventDefault();let c=e;"both"===this.options.gestureOrientation?c=Math.abs(e)>Math.abs(i)?e:i:"horizontal"===this.options.gestureOrientation&&(c=i);const u=o&&this.options.syncTouch,d=o&&"touchend"===s.type&&Math.abs(c)>5;d&&(c=this.velocity*this.options.touchInertiaMultiplier),this.scrollTo(this.targetScroll+c,Object.assign({programmatic:!1},u?{lerp:d?this.options.syncTouchLerp:1}:{lerp:this.options.lerp,duration:this.options.duration,easing:this.options.easing}))},this.onNativeScroll=()=>{if(null!==this._resetVelocityTimeout&&(clearTimeout(this._resetVelocityTimeout),this._resetVelocityTimeout=null),this._preventNextNativeScrollEvent)this._preventNextNativeScrollEvent=!1;else if(!1===this.isScrolling||"native"===this.isScrolling){const t=this.animatedScroll;this.animatedScroll=this.targetScroll=this.actualScroll,this.lastVelocity=this.velocity,this.velocity=this.animatedScroll-t,this.direction=Math.sign(this.animatedScroll-t),this.isScrolling="native",this.emit(),0!==this.velocity&&(this._resetVelocityTimeout=setTimeout((()=>{this.lastVelocity=this.velocity,this.velocity=0,this.isScrolling=!1,this.emit()}),400))}},window.lenisVersion="1.1.13",t&&t!==document.documentElement&&t!==document.body||(t=window),this.options={wrapper:t,content:i,eventsTarget:e,smoothWheel:s,syncTouch:o,syncTouchLerp:n,touchInertiaMultiplier:l,duration:r,easing:h,lerp:a,infinite:c,gestureOrientation:d,orientation:u,touchMultiplier:p,wheelMultiplier:m,autoResize:v,prevent:g,virtualScroll:S,__experimental__naiveDimensions:w},this.dimensions=new Dimensions(t,i,{autoResize:v}),this.updateClassName(),this.targetScroll=this.animatedScroll=this.actualScroll,this.options.wrapper.addEventListener("scroll",this.onNativeScroll,!1),this.options.wrapper.addEventListener("pointerdown",this.onPointerDown,!1),this.virtualScroll=new VirtualScroll(e,{touchMultiplier:p,wheelMultiplier:m}),this.virtualScroll.on("scroll",this.onVirtualScroll)}destroy(){this.emitter.destroy(),this.options.wrapper.removeEventListener("scroll",this.onNativeScroll,!1),this.options.wrapper.removeEventListener("pointerdown",this.onPointerDown,!1),this.virtualScroll.destroy(),this.dimensions.destroy(),this.cleanUpClassName()}on(t,i){return this.emitter.on(t,i)}off(t,i){return this.emitter.off(t,i)}setScroll(t){this.isHorizontal?this.rootElement.scrollLeft=t:this.rootElement.scrollTop=t}resize(){this.dimensions.resize(),this.animatedScroll=this.targetScroll=this.actualScroll,this.emit()}emit(){this.emitter.emit("scroll",this)}reset(){this.isLocked=!1,this.isScrolling=!1,this.animatedScroll=this.targetScroll=this.actualScroll,this.lastVelocity=this.velocity=0,this.animate.stop()}start(){this.isStopped&&(this.isStopped=!1,this.reset())}stop(){this.isStopped||(this.isStopped=!0,this.animate.stop(),this.reset())}raf(t){const i=t-(this.time||t);this.time=t,this.animate.advance(.001*i)}scrollTo(t,{offset:i=0,immediate:e=!1,lock:s=!1,duration:o=this.options.duration,easing:n=this.options.easing,lerp:l=this.options.lerp,onStart:r,onComplete:h,force:a=!1,programmatic:c=!0,userData:u}={}){if(!this.isStopped&&!this.isLocked||a){if("string"==typeof t&&["top","left","start"].includes(t))t=0;else if("string"==typeof t&&["bottom","right","end"].includes(t))t=this.limit;else{let e;if("string"==typeof t?e=document.querySelector(t):t instanceof HTMLElement&&(null==t?void 0:t.nodeType)&&(e=t),e){if(this.options.wrapper!==window){const t=this.rootElement.getBoundingClientRect();i-=this.isHorizontal?t.left:t.top}const s=e.getBoundingClientRect();t=(this.isHorizontal?s.left:s.top)+this.animatedScroll}}if("number"==typeof t){if(t+=i,t=Math.round(t),this.options.infinite?c&&(this.targetScroll=this.animatedScroll=this.scroll):t=clamp(0,t,this.limit),t===this.targetScroll)return null==r||r(this),void(null==h||h(this));if(this.userData=null!=u?u:{},e)return this.animatedScroll=this.targetScroll=t,this.setScroll(this.scroll),this.reset(),this.preventNextNativeScrollEvent(),this.emit(),null==h||h(this),void(this.userData={});c||(this.targetScroll=t),this.animate.fromTo(this.animatedScroll,t,{duration:o,easing:n,lerp:l,onStart:()=>{s&&(this.isLocked=!0),this.isScrolling="smooth",null==r||r(this)},onUpdate:(t,i)=>{this.isScrolling="smooth",this.lastVelocity=this.velocity,this.velocity=t-this.animatedScroll,this.direction=Math.sign(this.velocity),this.animatedScroll=t,this.setScroll(this.scroll),c&&(this.targetScroll=t),i||this.emit(),i&&(this.reset(),this.emit(),null==h||h(this),this.userData={},this.preventNextNativeScrollEvent())}})}}}preventNextNativeScrollEvent(){this._preventNextNativeScrollEvent=!0,requestAnimationFrame((()=>{this._preventNextNativeScrollEvent=!1}))}get rootElement(){return this.options.wrapper===window?document.documentElement:this.options.wrapper}get limit(){return this.options.__experimental__naiveDimensions?this.isHorizontal?this.rootElement.scrollWidth-this.rootElement.clientWidth:this.rootElement.scrollHeight-this.rootElement.clientHeight:this.dimensions.limit[this.isHorizontal?"x":"y"]}get isHorizontal(){return"horizontal"===this.options.orientation}get actualScroll(){return this.isHorizontal?this.rootElement.scrollLeft:this.rootElement.scrollTop}get scroll(){return this.options.infinite?function modulo(t,i){return(t%i+i)%i}(this.animatedScroll,this.limit):this.animatedScroll}get progress(){return 0===this.limit?1:this.scroll/this.limit}get isScrolling(){return this._isScrolling}set isScrolling(t){this._isScrolling!==t&&(this._isScrolling=t,this.updateClassName())}get isStopped(){return this._isStopped}set isStopped(t){this._isStopped!==t&&(this._isStopped=t,this.updateClassName())}get isLocked(){return this._isLocked}set isLocked(t){this._isLocked!==t&&(this._isLocked=t,this.updateClassName())}get isSmooth(){return"smooth"===this.isScrolling}get className(){let t="lenis";return this.isStopped&&(t+=" lenis-stopped"),this.isLocked&&(t+=" lenis-locked"),this.isScrolling&&(t+=" lenis-scrolling"),"smooth"===this.isScrolling&&(t+=" lenis-smooth"),t}updateClassName(){this.cleanUpClassName(),this.rootElement.className=`${this.rootElement.className} ${this.className}`.trim()}cleanUpClassName(){this.rootElement.className=this.rootElement.className.replace(/lenis(-\w+)?/g,"").trim()}}}));
 //# sourceMappingURL=lenis.min.js.map
 </script>
-<script src="a/saaefe4dfe2.js"></script>
+<script src="a/sedad91c97f.js"></script>
 <!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "a7a89e34bc4b4d8b8b9369519fdccf7c"}'></script><!-- End Cloudflare Web Analytics -->
+<script>/* Anonymous visit log (PC-LEGION 2026-11-24). Injected by make_lean.py, not part of the hub source.
+   No cookies, no storage, no IP. Sends: ?src= code, referrer host, language, sections seen, clicks, time on page, scroll depth.
+   Thoufeer's own devices: open the site once with ?me=1 to stop counting that browser (?me=0 to undo). */
+(function () {
+  var E = 'https://portfolio-leads.thoufeer-noushad.workers.dev/hit';
+  var q = new URLSearchParams(location.search);
+  try {
+    if (q.get('me') === '1') localStorage.setItem('tn_me', '1');
+    if (q.get('me') === '0') localStorage.removeItem('tn_me');
+    if (localStorage.getItem('tn_me') === '1') return;
+  } catch (e) {}
+  if (!navigator.sendBeacon) return;
+  var sid = Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+  var t0 = Date.now(), maxS = 0, sec = [], clk = [], ref = '';
+  try { ref = document.referrer ? new URL(document.referrer).host : ''; if (ref === location.host) ref = ''; } catch (e) {}
+  var send = function (o) { o.sid = sid; try { navigator.sendBeacon(E, new Blob([JSON.stringify(o)], { type: 'text/plain' })); } catch (e) {} };
+  send({ k: 'v', src: q.get('src') || '', ref: ref, lang: navigator.language || '' });
+  var dirty = false;
+  var upd = function () { if (!dirty) return; dirty = false; send({ k: 'u', secs: (Date.now() - t0) / 1000, scroll: maxS, sec: sec, clk: clk }); };
+  addEventListener('scroll', function () {
+    var h = document.documentElement.scrollHeight - innerHeight;
+    var p = h > 0 ? Math.round(scrollY / h * 100) : 100;
+    if (p > maxS) { maxS = p; dirty = true; }
+  }, { passive: true });
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting && sec.indexOf(e.target.id) < 0) { sec.push(e.target.id); dirty = true; } });
+    }, { threshold: 0.35 });
+    document.querySelectorAll('section[id]').forEach(function (s) { io.observe(s); });
+  }
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a,button,[data-open],[role=button]');
+    if (!a) return;
+    var lab = a.getAttribute('data-open') || a.getAttribute('aria-label') || (a.textContent || '').trim();
+    lab = lab.replace(/\s+/g, ' ').slice(0, 60);
+    if (!lab || /^[←→✕]$/.test(lab)) return;
+    if (clk.length < 40) { clk.push(lab); dirty = true; upd(); }
+  }, true);
+  setInterval(function () { if (document.visibilityState === 'visible') { dirty = true; upd(); } }, 20000);
+  addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') { dirty = true; upd(); } });
+  addEventListener('pagehide', function () { dirty = true; upd(); });
+})();
+</script>
 </body>
 </html>

@@ -30,7 +30,7 @@
     const nums = (p.nums || []).slice(0, 3);
     return `<li class="card" data-i="${i}" data-sec="${p.sec}">
       <div class="card__strip"><span>Sheet <b>P${pad(p.no)}</b></span><span>${p.sec + 1} · ${esc(SHORT[p.sec])}</span></div>
-      <div class="card__img is-${kindOf(p)}"><img src="${src(p.cover)}" alt="" loading="${i < 4 ? 'eager' : 'lazy'}" decoding="async"></div>
+      <div class="card__img is-${kindOf(p)}"><img src="${src(p.cover)}" alt="" loading="eager" decoding="async"></div>
       <div class="card__body"><h3 class="card__t">${esc(p.title)} <i>${esc(p.it)}</i></h3><p class="card__kick">${esc(p.kick)}</p></div>
       <dl class="card__nums">${nums.map(([a, b]) => `<div><dt data-num="${esc(a)}">${esc(a)}</dt><dd>${esc(b)}</dd></div>`).join('')}</dl>
       <button class="card__open" aria-label="Open project sheet: ${esc(p.title + ' ' + p.it)}"><span>Open sheet →</span></button>
@@ -474,9 +474,9 @@
         ${(p.nums || []).length ? `<div><p class="k">In numbers</p><dl class="nums">${p.nums.map(([a, b]) => `<div><dt>${esc(a)}</dt><dd>${esc(b)}</dd></div>`).join('')}</dl></div>` : ''}
       </aside>
       <ol class="moves">${(p.moves || []).map((m, j) => `
-        <li class="mv"><div class="mv__img ${m[3] === 'photo' ? 'is-photo' : ''}"><img src="${src(m[2])}" alt="${esc(m[4])}" loading="lazy"></div>
+        <li class="mv"><div class="mv__img ${m[3] === 'photo' ? 'is-photo' : ''}"><img src="${src(m[2])}" alt="${esc(m[4])}"></div>
         <h3><span>${pad(j + 1)}</span>${esc(m[0])}</h3><p>${esc(m[1])}</p><figcaption><span>Fig. ${pad(p.no)}.${j + 1}</span>${esc(m[4])}</figcaption></li>`).join('')}</ol>` +
-      ((window.__views ? window.__views(p.slug) : []).length ? `<section class="ov__views"><p class="k">Model views · tap to enlarge</p><ul>${window.__views(p.slug).map(v => `<li><button type="button" class="ov__v" data-cap="${esc(v.cap)}"><img src="${v.src}" alt="${esc(v.cap)}" loading="lazy"><span>${esc(v.cap)}</span></button></li>`).join('')}</ul></section>` : '');
+      ((window.__views ? window.__views(p.slug) : []).length ? `<section class="ov__views"><p class="k">Model views · tap to enlarge</p><ul>${window.__views(p.slug).map(v => `<li><button type="button" class="ov__v" data-cap="${esc(v.cap)}"><img src="${v.src}" alt="${esc(v.cap)}"><span>${esc(v.cap)}</span></button></li>`).join('')}</ul></section>` : '');
     $('.ov__scroll').scrollTop = 0;
   };
   window.__openOv = (slug, el) => { const i = P.findIndex(p => p.slug === slug); if (i >= 0) openOv(i, el); };
@@ -782,6 +782,13 @@
   };
   const close = () => { if (dlg.close) dlg.close(); else { dlg.removeAttribute('open'); dlg.dispatchEvent(new Event('close')); } };
   dlg.addEventListener('close', () => { lock(false); if (opener) opener.focus({ preventScroll: true }); });
+  /* round 12: a clear way back — the bar's Back button, Esc, a tap outside, and the phone's own Back button all close the CV */
+  const back = $('.cvd__back', dlg); if (back) back.addEventListener('click', close);
+  let pushed = false;
+  new MutationObserver(() => { const on = dlg.hasAttribute('open');
+    if (on && !pushed) { try { history.pushState({ cvd: 1 }, ''); pushed = true; } catch (_) {} }
+    if (!on && pushed) { pushed = false; if (history.state && history.state.cvd) history.back(); } }).observe(dlg, { attributes: true, attributeFilter: ['open'] });
+  addEventListener('popstate', () => { if (dlg.hasAttribute('open')) { pushed = false; close(); } });
   $('.cvd__x', dlg).addEventListener('click', close);
   dlg.addEventListener('click', e => { if (e.target === dlg) close(); });
   document.addEventListener('click', e => { const b = e.target.closest('.cv-open'); if (b) { e.preventDefault(); open(b); } });
@@ -1039,12 +1046,12 @@
   const pickables = []; root.traverse(o => { if (o.isMesh && IFC.has(o.material)) pickables.push(o); });
 
   /* ---- r9: scan-to-BIM intro — the finished model first appears as a point cloud ---- */
-  const SCAN = POSTER ? 0 : 2.4, NP = phone ? 3200 : 9000;
+  const SCAN = POSTER ? 0 : 1.3, SPEED = 1.35, NP = phone ? 2600 : 7000;
   scene.updateMatrixWorld(true);
   const rootInv = root.matrixWorld.clone().invert(), tris = []; let area = 0;
   const va = new T.Vector3(), vb = new T.Vector3(), vc = new T.Vector3(), e1 = new T.Vector3(), e2 = new T.Vector3();
   pickables.forEach(o => {
-    if (o.isInstancedMesh || !o.geometry.index) return;
+    if (o.isInstancedMesh || !o.geometry.index || ['i', 'm', 't'].includes(layerOf(o))) return;
     const w = layerOf(o) === 'g' ? .22 : 1, mw = rootInv.clone().multiply(o.matrixWorld), pa = o.geometry.attributes.position, ix = o.geometry.index.array;
     for (let i = 0; i < ix.length; i += 3) {
       va.fromBufferAttribute(pa, ix[i]).applyMatrix4(mw); vb.fromBufferAttribute(pa, ix[i + 1]).applyMatrix4(mw); vc.fromBufferAttribute(pa, ix[i + 2]).applyMatrix4(mw);
@@ -1057,28 +1064,46 @@
   for (let n = 0; n < NP && tris.length; n++) { const [, A, Bv, C] = pick(Math.random() * area); let u = Math.random(), v = Math.random(); if (u + v > 1) { u = 1 - u; v = 1 - v; } pts.push(new T.Vector3().copy(A).addScaledVector(e1.subVectors(Bv, A), u).addScaledVector(e2.subVectors(C, A), v)); }
   pts.sort((p, q) => p.y - q.y);
   const tgt = new Float32Array(pts.length * 3), jit = new Float32Array(pts.length * 3), cpos = new Float32Array(pts.length * 3);
-  pts.forEach((p, i) => { tgt.set([p.x, p.y, p.z], i * 3); jit.set([(Math.random() - .5) * .9, (Math.random() - .2) * .7, (Math.random() - .5) * .9], i * 3); });
+  pts.forEach((p, i) => { tgt.set([p.x, p.y, p.z], i * 3); const rr = .9 + Math.random() * 1.6, th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1); jit.set([rr * Math.sin(ph) * Math.cos(th), Math.abs(rr * Math.cos(ph)) * .8 + .4, rr * Math.sin(ph) * Math.sin(th)], i * 3); });
+  const scanG = new T.BufferGeometry().setAttribute('position', new T.Float32BufferAttribute([X0, 0, Z0, X1, 0, Z0, X1, 0, ZK, X0, 0, ZK, X0, 0, Z0], 3));
+  const scanPlane = new T.Line(scanG, new T.LineBasicMaterial({ color: COB, transparent: true, opacity: 0 })); root.add(scanPlane); scanPlane.visible = !POSTER;
+  const scanFill = new T.Mesh(new T.PlaneGeometry(X1 - X0, ZK - Z0).rotateX(-Math.PI / 2).translate((X0 + X1) / 2, 0, (Z0 + ZK) / 2), new T.MeshBasicMaterial({ color: COB, transparent: true, opacity: 0, side: T.DoubleSide, depthWrite: false })); root.add(scanFill); scanFill.visible = !POSTER;
   const cg = new T.BufferGeometry(); cg.setAttribute('position', new T.BufferAttribute(cpos, 3)); cg.setDrawRange(0, 0);
   const cloud = new T.Points(cg, new T.PointsMaterial({ color: COB, size: phone ? 1.7 : 1.9, sizeAttenuation: false, transparent: true, opacity: 0, depthWrite: false }));
   cloud.frustumCulled = false; root.add(cloud); cloud.visible = !POSTER;
   const scanLbl = document.createElement('p'); scanLbl.className = 'h3d__scan'; scanLbl.innerHTML = '<i></i>Scan · <b>0</b> points → BIM'; box.append(scanLbl);
+  let ex0 = 0, exSm = 0;
   const cloudStep = el => {
-    if (!cloud.visible) return;
-    if (el > SCAN + 3.6) { cloud.visible = false; scanLbl.classList.remove('on'); return; }
-    const n = Math.floor(pts.length * ease(clamp(el / 1.4))), j = 1 - ease(clamp((el - .25) / 1.9));
-    for (let i = 0; i < n * 3; i++) cpos[i] = tgt[i] + jit[i] * j;
+    if (!cloud.parent) return;
+    if (el > SCAN + 1.6) { scanLbl.classList.remove('on'); scanPlane.visible = scanFill.visible = false; cloud.material.opacity = .2; cloud.material.size = phone ? 1.4 : 1.5; cloud.visible = L.s.visible && ex0 < .05; return; }
+    cloud.visible = ex0 < .05;
+    const n = Math.floor(pts.length * ease(clamp(el / .7))), j = 1 - ease(clamp((el - .05) / 1.2));
+    const sw = j * 2.2, cs = Math.cos(sw), sn = Math.sin(sw);
+    for (let i = 0; i < n * 3; i += 3) { const jx = jit[i] * j, jz = jit[i + 2] * j; cpos[i] = tgt[i] + jx * cs - jz * sn; cpos[i + 1] = tgt[i + 1] + jit[i + 1] * j; cpos[i + 2] = tgt[i + 2] + jx * sn + jz * cs; }
+    cloud.material.size = (phone ? 1.7 : 1.9) + j * 1.1;
+    const sy = -.2 + ease(clamp(el / 1.15)) * (roof + .8); scanPlane.position.y = scanFill.position.y = sy;
+    const so = el < 1.2 ? .8 * Math.min(1, el * 6) : .8 * (1 - clamp((el - 1.2) / .35)); scanPlane.material.opacity = so; scanFill.material.opacity = so * .1;
+    if (el > SCAN + 1) { scanPlane.visible = scanFill.visible = false; }
     cg.attributes.position.needsUpdate = true; cg.setDrawRange(0, n);
-    cloud.material.opacity = el < SCAN ? .9 : .9 * (1 - clamp((el - SCAN) / 3.4));
+    cloud.material.opacity = el < SCAN ? .85 : Math.max(.2, .85 * (1 - clamp((el - SCAN) / 1.3)));
     scanLbl.classList.toggle('on', el < SCAN + .8); scanLbl.querySelector('b').textContent = n.toLocaleString('en-US');
   };
 
   /* ---- r9: exploded axonometric on scroll, with leader labels ---- */
   const XL = [['s', 'Structure', new T.Vector3(W, fl(1) + .2, 0)], ['i', 'Interior', new T.Vector3(W, ft(1) + .4, D * .3)], ['m', 'MEP', new T.Vector3(W - .35, yC(1), .35)],
               ['a', 'Architecture', new T.Vector3(W + .15, roof + .3, D * .2)], ['t', 'Twin', HUB]];
-  const XLIFT = { g: 0, s: 0, i: .9, m: 2.0, a: 3.1, t: 3.6 };
-  XL.forEach(x => { x.el = document.createElement('p'); x.el.className = 'h3d__xl'; x.el.innerHTML = `<i></i><span>${x[1]}</span>`; tagLayer.append(x.el); });
+  // exploded axonometric: facade and twin lift up, MEP slides out to the right, interior to the left, structure stays
+  const XOFF = { g: [0, 0, 0], s: [0, 0, 0], i: [-2.7, .35, 2.7], m: [2.7, .7, -2.7], a: [0, 4.1, 0], t: [0, 4.8, 0] };
+  const xlBox = document.createElement('div'); xlBox.className = 'h3d__xls'; xlBox.innerHTML = '<svg class="h3d__lead" aria-hidden="true"></svg><p class="h3d__xlh">Layers · click to isolate</p>'; box.append(xlBox);
+  const leadSvg = xlBox.querySelector('svg'); let solo = null;
+  XL.forEach(x => { x.el = document.createElement('button'); x.el.type = 'button'; x.el.className = 'h3d__xl'; x.el.dataset.l = x[0]; x.el.setAttribute('aria-pressed', 'false'); x.el.innerHTML = `<span>${x[1]}</span>`; xlBox.append(x.el);
+    x.el.addEventListener('click', () => { stopLoop(); if (!settled) { t0 = performance.now() - END * 1000 - SCAN * 1000 - 200; }
+      solo = solo === x[0] ? null : x[0];
+      Object.keys(L).forEach(k => { L[k].visible = !solo || k === solo || (k === 'g' && solo === 's'); });
+      XL.forEach(y => y.el.setAttribute('aria-pressed', String(solo === y[0])));
+      if (cap) $$('[data-l]', cap).forEach(b => b.setAttribute('aria-pressed', String(L[b.dataset.l].visible))); }); });
   let camEx = -1;
-  const camFit = ex => { if (Math.abs(ex - camEx) < .002) return; camEx = ex; const w = box.clientWidth, h = box.clientHeight; if (!w || !h) return; const a = w / h, V = Math.max(hh, hw / a) * (1 + ex * .72), yy = cy + ex * 1.75; cam.left = cx - V * a; cam.right = cx + V * a; cam.top = yy + V; cam.bottom = yy - V; cam.updateProjectionMatrix(); };
+  const camFit = ex => { if (Math.abs(ex - camEx) < .002) return; camEx = ex; const w = box.clientWidth, h = box.clientHeight; if (!w || !h) return; const a = w / h, V = Math.max(hh, hw / a) * (1 + ex * .95), yy = cy + ex * 2.1; cam.left = cx - V * a; cam.right = cx + V * a; cam.top = yy + V; cam.bottom = yy - V; cam.updateProjectionMatrix(); };
 
   /* ---- r9: live twin — pulses along the MEP runs, small live readings ---- */
   const pulses = []; PIPES.forEach((c, k) => { for (let j = 0; j < (phone ? 1 : 2); j++) { const m = new T.Mesh(new T.SphereGeometry(.045, 8, 6), basic(0x7F93FF, 1, true)); m.visible = false; L.m.add(m); pulses.push({ m, c, o: j * .5 + k * .17 }); } });
@@ -1141,15 +1166,15 @@
   };
   const frame = now => {
     if (!run) return; requestAnimationFrame(frame);
-    const el = POSTER ? 99 : (now - t0) / 1000, off = cycle === 0 ? SCAN : 0, eb = el - off;
-    if (cycle === 0) cloudStep(el);
+    const el = POSTER ? 99 : (now - t0) / 1000, off = cycle === 0 ? SCAN : 0, eb = (el - off) * SPEED;
+    cloudStep(cycle === 0 ? el : 99);
     if (!settled) { step(eb); if (eb > END) { settled = true; restAt = now; box.classList.add('is-done'); if (cap) $$('[data-l]', cap).forEach(b => b.classList.remove('is-lead')); } }
     else if (loop && !outAt && now - restAt > REST * 1000) outAt = now;
     if (outAt) { outK = ease(clamp((now - outAt) / (OUT * 1000)));
       if (outK >= 1) { cycle++; plan(LEADS[cycle % LEADS.length]); outAt = 0; outK = 0; settled = false; t0 = now; step(0); } }
     // scroll: an exploded axonometric, then fade
-    const r = hero.getBoundingClientRect(), exS = ease(clamp(Math.max(-r.top, scrollY) / (r.height * .5))), ex = Math.max(exS, outK);
-    Object.keys(XLIFT).forEach(k => { L[k].position.y = ex * XLIFT[k]; });
+    const r = hero.getBoundingClientRect(); ex0 = Math.max(outK, ease(clamp(Math.max(-r.top, scrollY) / (r.height * .5)))); const exT = ease(clamp(Math.max(-r.top, scrollY) / (r.height * .5))); exSm += (exT - exSm) * .18; if (Math.abs(exT - exSm) < .002) exSm = exT; const exS = exSm; const ex = Math.max(exS, outK);
+    Object.keys(XOFF).forEach(k => { const o = XOFF[k]; L[k].position.set(o[0] * ex, o[1] * ex, o[2] * ex); });
     camFit(exS); box.style.opacity = Math.min(1 - exS * .2, 1 - outK * .92);
     // x-ray: once built, a section plane follows the cursor (phones: one slow sweep while it rests)
     if (settled && !outAt) { let tx = 99;
@@ -1176,8 +1201,15 @@
       g.el.classList.toggle('on', !POSTER && eb > g.t && L[g.layer].visible && ex < .3 && !hot);
     });
     // exploded labels
-    XL.forEach(x => { tmp.copy(x[2]); root.localToWorld(tmp); tmp.y += L[x[0]].position.y; tmp.project(cam);
-      x.el.style.transform = `translate(${((tmp.x * .5 + .5) * w).toFixed(1)}px, ${((-tmp.y * .5 + .5) * h).toFixed(1)}px)`; x.el.classList.toggle('on', exS > .14 && L[x[0]].visible); });
+    const showXL = exS > .1 || solo; xlBox.classList.toggle('on', !!showXL);
+    if (showXL) { const lw = phone ? 96 : 128, colX = w - lw, gap = phone ? 26 : 32; let lines = '';
+      const pos = XL.map(x => { tmp.copy(x[2]).add(L[x[0]].position); root.localToWorld(tmp); tmp.project(cam); return { x, px: (tmp.x * .5 + .5) * w, py: (-tmp.y * .5 + .5) * h }; }).sort((a, b) => a.py - b.py);
+      let last = 28; pos.forEach(p => { p.ly = Math.max(p.py, last + gap); last = p.ly; });
+      const over = last - (h - 50); if (over > 0) pos.forEach(p => { p.ly -= over; });
+      pos.forEach(p => { p.x.el.style.transform = `translate(${colX}px, ${(p.ly - 12).toFixed(1)}px)`; p.x.el.style.width = lw + 'px';
+        lines += `<polyline points="${p.px.toFixed(1)},${p.py.toFixed(1)} ${(colX - 18).toFixed(1)},${p.ly.toFixed(1)} ${colX},${p.ly.toFixed(1)}"/><circle cx="${p.px.toFixed(1)}" cy="${p.py.toFixed(1)}" r="3.5"/>`;
+        p.x.el.classList.toggle('dim', !!solo && solo !== p.x[0]); });
+      leadSvg.setAttribute('viewBox', `0 0 ${w} ${h}`); leadSvg.innerHTML = lines; }
     // live twin
     const live = !POSTER && settled && L.m.visible && ex < .3;
     pulses.forEach(p => { p.m.visible = live; if (live) p.m.position.copy(p.c.getPointAt(((now / 1000) * .16 + p.o) % 1)); });
@@ -1382,29 +1414,34 @@
   const box = $('.cl__chart');
   if (box) {
     const Y0 = 2012.5, Y1 = 2027;
-    const LANES = [['Study', [[2012.5, 2017.5, 'B.Arch · SPA New Delhi'], [2019.5, 2021.5, 'M.BEM · SPA New Delhi'], [2025.3, 2026.3, "Master's · UB · Zigurat"]]],
-      ['Design', [[2013.45, 2017.45, 'Freelance architect and 3D visualiser'], [2017.45, 2027, 'Novacasa Builders, Kerala (co-runs)']]],
-      ['Site and PM', [[2017.45, 2019.55, 'Built Well · site project manager'], [2024.1, 2024.65, 'CBRE · project manager']]],
-      ['BIM and digital', [[2021.45, 2024.1, 'Techture · BIM coordinator'], [2024.6, 2025.55, 'The Blue Khirki · consultant'], [2025.5, 2025.72, 'Scruffy Dog · Qiddiya'], [2025.7, 2027, 'Elastic Potential · digital delivery lead']]]];
+    const LANES = [['Study', [[2012.5, 2017.5, 'B.Arch · SPA New Delhi'], [2019.5, 2021.5, 'M.BEM · SPA New Delhi'], [2025.3, 2026.3, "Master's · UB · Zigurat", 0, 'UB']]],
+      ['Design', [[2013.45, 2017.45, 'Freelance architect and 3D visualiser', 0, 'FREELANCE'], [2017.45, 2027, 'Novacasa Builders, Kerala (co-runs)', 0, 'NOVACASA']]],
+      ['Site and PM', [[2014.35, 2014.6, 'COSTFORD, Trivandrum · intern', 0, 'COSTFORD'], [2016.0, 2016.5, 'MetaSpace Architects · intern', 0, 'METASPACE'], [2017.45, 2019.55, 'Built Well · site project manager', 0, 'BUILT WELL'], [2019.5, 2021.5, 'M.BEM · project management, incl. Space Matrix PM internship (2020)', 0, 'M.BEM'], [2024.1, 2024.65, 'CBRE · project manager', 0, 'CBRE']]],
+      ['BIM and digital', [[2012.5, 2017.5, 'B.Arch · digital design and 3D'], [2019.5, 2021.5, 'M.BEM · BIM'], [2021.45, 2024.1, 'Techture · BIM coordinator', 0, 'TECHTURE'], [2024.6, 2025.55, 'The Blue Khirki · consultant', 0, 'BLUE KHIRKI'], [2025.5, 2025.72, 'Scruffy Dog · Qiddiya', 0, 'QIDDIYA'], [2025.7, 2027, 'Elastic Potential · digital delivery lead', 0, 'ELASTIC']]]];
     const draw = () => {
-    const W = Math.max(300, box.clientWidth - 24), LW = W < 520 ? 74 : 120, LH = 46, TOP = 8, H = TOP + LANES.length * LH + 30, X = y => LW + (y - Y0) / (Y1 - Y0) * (W - LW - 10), step = W < 520 ? 3 : 2;
+    const W = Math.max(300, box.clientWidth - 24), LW = W < 520 ? 74 : 120, LH = W < 520 ? 56 : 50, TOP = 8, H = TOP + LANES.length * LH + 30, X = y => LW + (y - Y0) / (Y1 - Y0) * (W - LW - 10), step = W < 520 ? 3 : 2;
     let g = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" class="cl__svg" role="img" aria-label="Career from 2013 to now in four lanes: study, design, site and project management, BIM and digital">`;
     for (let y = 2013; y <= 2026; y++) g += `<line class="cl__tick" x1="${X(y)}" y1="${TOP}" x2="${X(y)}" y2="${H - 24}"/>` + ((y - 2013) % step === 0 ? `<text class="cl__yr" x="${X(y)}" y="${H - 8}">${W < 520 ? "'" + String(y).slice(2) : y}</text>` : '');
     g += `<line class="cl__now" x1="${X(2026.9)}" y1="${TOP - 4}" x2="${X(2026.9)}" y2="${H - 24}"/>`;
     LANES.forEach(([name, bars], i) => {
       const y = TOP + i * LH;
       g += `<text class="cl__lane" x="0" y="${y + 27}">${W < 520 ? name.replace('Site and PM', 'Site/PM').replace('BIM and digital', 'BIM/digital') : name}</text><line class="cl__base" x1="${LW}" y1="${y + 40}" x2="${W - 10}" y2="${y + 40}"/>`;
-      bars.forEach(([a, b, t], j) => g += `<g class="cl__bar l${i}" tabindex="0" data-t="${t} · ${Math.floor(a) === Math.floor(b) ? Math.floor(a) : Math.floor(a) + ' – ' + (b >= 2026.9 ? 'now' : Math.floor(b))}"><rect x="${X(a)}" y="${y + 10}" width="${Math.max(3, X(b) - X(a) - 2)}" height="24" style="--d:${(i * .12 + j * .1).toFixed(2)}s"/>${X(b) - X(a) > t.split(' · ')[0].length * 6.6 + 14 ? `<text class="cl__bt" x="${X(a) + 6}" y="${y + 26}">${t.split(' · ')[0]}</text>` : ''}</g>`);
+      const occ = [];
+      bars.forEach(([a, b, t, top, sh], j) => g += `<g class="cl__bar l${i}${top ? ' cl__bar--top' : ''}${(i === 3 && a < 2021) || (i === 2 && a > 2019 && a < 2021.4 && !top) ? ' cl__bar--soft' : ''}" tabindex="0" data-t="${t} · ${Math.floor(a) === Math.floor(b) ? Math.floor(a) : Math.floor(a) + ' – ' + (b >= 2026.9 ? 'now' : Math.floor(b))}"><rect x="${X(a)}" y="${y + 10}" width="${Math.max(3, X(b) - X(a) - 2)}" height="24" style="--d:${((a - Y0) / (Y1 - Y0) * 2.2).toFixed(2)}s"${top ? ` transform="translate(0 6)"` : ''}/>${(() => { const wB = X(b) - X(a), full = t.split(' · ')[0], s2 = sh || full; if (wB > full.length * 6.6 + 14) return `<text class="cl__bt" x="${X(a) + 6}" y="${y + 26}">${full}</text>`; if (wB > s2.length * 6.2 + 12) return `<text class="cl__bt" x="${X(a) + 5}" y="${y + 26}">${s2}</text>`; return ''; })()}</g>`);
     });
+    g += `<g class="cl__ph"><line x1="0" y1="${TOP - 6}" x2="0" y2="${H - 22}"/><text x="4" y="${TOP + 2}">2013</text></g>`;
     box.innerHTML = g + '</svg><p class="cl__tip" aria-live="polite">Tap or hover a bar</p>';
+    box._ph = { el: box.querySelector('.cl__ph'), X, a: 2013, b: 2026.9 };
     const tip = $('.cl__tip', box);
     $$('.cl__bar', box).forEach(b => { const show = () => { $$('.cl__bar', box).forEach(x => x.classList.toggle('on', x === b)); tip.textContent = b.dataset.t; };
       b.addEventListener('mouseenter', show); b.addEventListener('focus', show); b.addEventListener('click', show); });
     };
     draw(); let rz, lw = innerWidth; addEventListener('resize', () => { if (innerWidth === lw) return; lw = innerWidth; clearTimeout(rz); rz = setTimeout(draw, 200); });
-    if (!reduce && 'IntersectionObserver' in window) { box.classList.add('is-anim'); const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); box.classList.add('in'); } }, { threshold: .3 }); io.observe(box); setTimeout(() => box.classList.add('in'), 5000); }
+    if (!reduce && 'IntersectionObserver' in window) { box.classList.add('is-anim'); const sweep = () => { const ph = box._ph; if (!ph) return; const t0 = performance.now(); const f = now => { const k = Math.min(1, (now - t0) / 2600), e = 1 - Math.pow(1 - k, 3), y = ph.a + (ph.b - ph.a) * e; ph.el.setAttribute('transform', `translate(${ph.X(y).toFixed(1)} 0)`); ph.el.querySelector('text').textContent = y >= 2026.8 ? 'now' : Math.floor(y); if (k < 1) requestAnimationFrame(f); else ph.el.classList.add('done'); }; requestAnimationFrame(f); };
+      const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); box.classList.add('in'); sweep(); } }, { threshold: .3 }); io.observe(box); setTimeout(() => box.classList.add('in'), 5000); }
   }
   const v = $('.venn');
+  if (v && reduce) $$('animateMotion', v).forEach(m => m.remove());
   if (v) {
     $$('.venn__c', v).forEach(c => { c.addEventListener('mouseenter', () => v.dataset.h = c.dataset.k); c.addEventListener('mouseleave', () => delete v.dataset.h); });
     if (!reduce && 'IntersectionObserver' in window) { v.classList.add('is-anim'); const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); v.classList.add('in'); } }, { threshold: .3 }); io.observe(v); setTimeout(() => v.classList.add('in'), 5000); }
