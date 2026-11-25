@@ -1447,3 +1447,36 @@
     if (!reduce && 'IntersectionObserver' in window) { v.classList.add('is-anim'); const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); v.classList.add('in'); } }, { threshold: .3 }); io.observe(v); setTimeout(() => v.classList.add('in'), 5000); }
   }
 })();
+
+/* ===== round 13: slight movement on every sheet ===== */
+(() => {
+  const $ = (q, r = document) => r.querySelector(q), $$ = (q, r = document) => [...r.querySelectorAll(q)];
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const fine = matchMedia('(pointer: fine)').matches, desk = () => innerWidth > 820, G = window.gsap;
+  document.documentElement.classList.add('r13');
+  /* 1. each sheet draws its frame and a scan line runs across it as it arrives */
+  const secs = $$('main > section, .sf');
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('r13-in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -18% 0px' });
+  secs.forEach(s => { if (!$('.r13-scan', s)) { const l = document.createElement('i'); l.className = 'r13-scan'; l.setAttribute('aria-hidden', 'true'); s.append(l); } io.observe(s); });
+  /* 2. section labels type in (Sheet 0X · …) */
+  $$('main > section .k').forEach(k => { if (k.closest('.hero') || k.children.length || k.textContent.length > 70) return; k.classList.add('r13-type'); });
+  const io2 = new IntersectionObserver(es => es.forEach(e => { if (!e.isIntersecting) return; io2.unobserve(e.target); const el = e.target, full = el.textContent; let i = 0; el.textContent = ''; el.classList.add('typing');
+    const t = setInterval(() => { i += 2; el.textContent = full.slice(0, i); if (i >= full.length) { clearInterval(t); el.textContent = full; el.classList.remove('typing'); } }, 16); }), { rootMargin: '0px 0px -10% 0px' });
+  $$('.r13-type').forEach(k => io2.observe(k));
+  /* 3. pictures drift gently with the scroll (laptops) and buttons lean towards the cursor */
+  if (G && window.ScrollTrigger && desk()) {
+    $$('.spread__fig img, .edc figure img, .contact__model .peel__view, .profile__photo').forEach(el => G.fromTo(el, { y: 14 }, { y: -14, ease: 'none', scrollTrigger: { trigger: el, start: 'top bottom', end: 'bottom top', scrub: .6 } }));
+    $$('.h2, .creds__t, .map__t, .voices__t, .contact__h').forEach(h => G.fromTo(h, { x: -10 }, { x: 10, ease: 'none', scrollTrigger: { trigger: h, start: 'top bottom', end: 'bottom top', scrub: .8 } }));
+  }
+  if (G && fine) $$('.btn, .reel__arr').forEach(b => {
+    b.addEventListener('mousemove', e => { const r = b.getBoundingClientRect(); G.to(b, { x: (e.clientX - r.left - r.width / 2) * .18, y: (e.clientY - r.top - r.height / 2) * .25, duration: .35, ease: 'power3.out' }); });
+    b.addEventListener('mouseleave', () => G.to(b, { x: 0, y: 0, duration: .5, ease: 'elastic.out(1, .5)' }));
+  });
+  /* 4. numbers count up wherever they appear for the first time */
+  if (G) $$('.nums dt, .hero__nums b, .edc__sum b').forEach(el => {
+    const m = el.textContent.trim().match(/^([^\d]*)(\d[\d,]*)(\D*)$/); if (!m || el.dataset.r13 || el.querySelector('[data-count]') || el.closest('[data-n]') || el.hasAttribute('data-n')) return;
+    const target = +m[2].replace(/,/g, ''); if (target >= 1900 && target <= 2100) return; el.dataset.r13 = 1;
+    const o = new IntersectionObserver(es => { if (!es[0].isIntersecting) return; o.disconnect(); const v = { n: 0 }; G.to(v, { n: target, duration: 1.1, ease: 'power3.out', onUpdate: () => { el.textContent = m[1] + Math.round(v.n).toLocaleString('en-US') + m[3]; }, onComplete: () => { el.textContent = m[1] + target.toLocaleString('en-US') + m[3]; } }); }, { rootMargin: '0px 0px -10% 0px' });
+    o.observe(el);
+  });
+})();
